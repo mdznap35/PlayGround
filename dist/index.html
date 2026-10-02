@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>السلام عليكم ورحمة الله وبركاته</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #0f766e 0%, #115e59 40%, #1e3a8a 100%);
+    color: #fff;
+    padding: 24px;
+  }
+  .card {
+    max-width: 640px;
+    width: 100%;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 20px;
+    padding: 40px 32px;
+    text-align: center;
+    backdrop-filter: blur(8px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  }
+  .badge {
+    display: inline-block;
+    font-size: 14px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 999px;
+    padding: 6px 14px;
+    margin-bottom: 16px;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 44px);
+    line-height: 1.4;
+    margin: 0 0 12px;
+  }
+  p {
+    font-size: clamp(15px, 2.5vw, 18px);
+    line-height: 1.9;
+    opacity: 0.92;
+    margin: 0 0 24px;
+  }
+  .row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  button, a.btn {
+    font-size: 16px;
+    border-radius: 12px;
+    padding: 12px 20px;
+    border: 1px solid rgba(255,255,255,0.3);
+    cursor: pointer;
+    text-decoration: none;
+  }
+  #greetBtn {
+    background: #fff;
+    color: #115e59;
+    font-weight: 700;
+    border: none;
+  }
+  #timeBtn {
+    background: transparent;
+    color: #fff;
+  }
+  #msg {
+    margin-top: 20px;
+    min-height: 28px;
+    font-weight: 600;
+  }
+  footer {
+    margin-top: 24px;
+    font-size: 13px;
+    opacity: 0.75;
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="badge">تطبيق ترحيب</div>
+    <h1>السلام عليكم ورحمة الله وبركاته</h1>
+    <p>أهلاً وسهلاً بك في هذا التطبيق البسيط. نسأل الله أن يبارك في يومك ويوفقك لكل خير.</p>
+    <div class="row">
+      <button id="greetBtn" type="button">اضغط للترحيب</button>
+      <button id="timeBtn" type="button">عرض الوقت</button>
+    </div>
+    <div id="msg" aria-live="polite"></div>
+    <footer>صُنع بحب • صفحة ثابتة تعمل دون خادم خلفي</footer>
+  </main>
+<script>
+  var msg = document.getElementById('msg');
+  document.getElementById('greetBtn').addEventListener('click', function () {
+    msg.textContent = 'وعليكم السلام ورحمة الله وبركاته، حياك الله!';
+  });
+  document.getElementById('timeBtn').addEventListener('click', function () {
+    try {
+      msg.textContent = new Date().toLocaleString('ar');
+    } catch (e) {
+      msg.textContent = String(new Date());
+    }
+  });
+</script>
+</body>
+</html>
