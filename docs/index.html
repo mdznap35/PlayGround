@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AnyClaw — OpenClaw + Codex + Claude Code on Android</title>
+<meta name="description" content="OpenClaw + Codex CLI + Claude Code (via Claw Code / OpenClaude) in a single Android APK. Three AI agents, one app, your pocket. No root. No Termux." />
+<meta property="og:title" content="AnyClaw — Claude Code on Android" />
+<meta property="og:description" content="OpenClaw + Codex + Claude Code running natively on Android. Three agents, one APK, zero dependencies." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://friuns2.github.io/openclaw-android-assistant/" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦞</text></svg>" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #08080c;
+    --surface: #0f0f15;
+    --surface-raised: #151520;
+    --border: #1c1c2a;
+    --border-glow: #2a1a10;
+    --text: #e8e4df;
+    --text-dim: #8a8680;
+    --amber: #e8941a;
+    --amber-soft: #c4782a;
+    --crimson: #c93535;
+    --crimson-deep: #8a1f1f;
+    --cream: #f0e6d6;
+    --mono: 'DM Mono', 'SF Mono', monospace;
+    --display: 'Instrument Serif', Georgia, serif;
+    --body: 'Syne', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--body);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--amber); text-decoration: none; transition: color .2s; }
+  a:hover { color: var(--cream); }
+
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: .035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ─── HERO ─── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem 1.5rem;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 140%;
+    height: 80%;
+    background: radial-gradient(ellipse at center, rgba(232, 148, 26, .06) 0%, rgba(201, 53, 53, .03) 40%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--border-glow) 30%, var(--amber-soft) 50%, var(--border-glow) 70%, transparent 100%);
+  }
+
+  .hero-claw {
+    font-size: clamp(4rem, 12vw, 8rem);
+    line-height: 1;
+    margin-bottom: 1rem;
+    animation: float 6s ease-in-out infinite;
+    filter: drop-shadow(0 0 40px rgba(232, 148, 26, .15));
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  .hero h1 {
+    font-family: var(--display);
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    font-weight: 400;
+    letter-spacing: -.03em;
+    line-height: .9;
+    color: var(--cream);
+    margin-bottom: .75rem;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--amber);
+  }
+
+  .hero-sub {
+    font-family: var(--mono);
+    font-size: clamp(.75rem, 1.4vw, .9rem);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: .2em;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-desc {
+    max-width: 560px;
+    font-size: clamp(1rem, 2vw, 1.15rem);
+    color: var(--text-dim);
+    margin-bottom: 3rem;
+    line-height: 1.75;
+  }
+
+  .hero-desc strong { color: var(--text); font-weight: 600; }
+
+  .cta-group { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    padding: .85rem 2rem;
+    border-radius: 4px;
+    font-family: var(--body);
+    font-weight: 600;
+    font-size: .95rem;
+    letter-spacing: .02em;
+    transition: all .25s ease;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-primary {
+    background: var(--amber);
+    color: #080808;
+  }
+  .btn-primary:hover {
+    background: var(--cream);
+    color: #080808;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(232, 148, 26, .25);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover {
+    border-color: var(--amber-soft);
+    color: var(--amber);
+    transform: translateY(-2px);
+  }
+
+  /* ─── SECTION ─── */
+  .section {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 6rem 1.5rem;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .25em;
+    color: var(--amber-soft);
+    margin-bottom: .75rem;
+  }
+
+  .section h2 {
+    font-family: var(--display);
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 400;
+    color: var(--cream);
+    margin-bottom: 1.5rem;
+    line-height: 1.1;
+  }
+
+  .section h2 em { font-style: italic; color: var(--amber); }
+
+  .section-intro {
+    max-width: 640px;
+    color: var(--text-dim);
+    font-size: 1.05rem;
+    line-height: 1.75;
+    margin-bottom: 3rem;
+  }
+
+  /* ─── FEATURE GRID ─── */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .feat {
+    background: var(--surface);
+    padding: 2rem;
+    transition: background .3s;
+  }
+
+  .feat:hover {
+    background: var(--surface-raised);
+  }
+
+  .feat-icon {
+    font-size: 1.6rem;
+    margin-bottom: .75rem;
+    display: block;
+  }
+
+  .feat h3 {
+    font-family: var(--body);
+    font-size: .95rem;
+    font-weight: 700;
+    margin-bottom: .5rem;
+    color: var(--cream);
+  }
+
+  .feat p {
+    font-size: .85rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ─── ARCH ─── */
+  .arch-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .arch-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  .arch-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .arch-dot:nth-child(1) { background: var(--crimson); }
+  .arch-dot:nth-child(2) { background: var(--amber); }
+  .arch-dot:nth-child(3) { background: #22c55e; }
+
+  .arch-body {
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .arch-body pre {
+    font-family: var(--mono);
+    font-size: .78rem;
+    line-height: 1.7;
+    color: var(--amber-soft);
+    white-space: pre;
+    margin: 0;
+  }
+
+  .arch-body .hl { color: var(--amber); }
+  .arch-body .dim { color: var(--text-dim); }
+  .arch-body .grn { color: #22c55e; }
+
+  /* ─── STEPS ─── */
+  .steps {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    counter-reset: step;
+  }
+
+  .step {
+    background: var(--surface);
+    padding: 2rem;
+    counter-increment: step;
+    position: relative;
+    transition: background .3s;
+  }
+
+  .step:hover { background: var(--surface-raised); }
+
+  .step::before {
+    content: counter(step, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: .7rem;
+    color: var(--amber-soft);
+    letter-spacing: .1em;
+    display: block;
+    margin-bottom: .75rem;
+  }
+
+  .step h3 {
+    font-size: .95rem;
+    font-weight: 700;
+    margin-bottom: .4rem;
+    color: var(--cream);
+  }
+
+  .step p {
+    font-size: .85rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  /* ─── QUICK START CODE ─── */
+  .code-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .code-tab {
+    padding: .75rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: .75rem;
+    color: var(--text-dim);
+    letter-spacing: .05em;
+  }
+
+  .code-body {
+    padding: 1.5rem;
+    overflow-x: auto;
+  }
+
+  .code-body code {
+    font-family: var(--mono);
+    font-size: .82rem;
+    line-height: 1.8;
+    color: #22c55e;
+    white-space: pre;
+  }
+  .code-body .cmt { color: var(--text-dim); }
+
+  /* ─── STACK TABLE ─── */
+  .stack-table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .stack-table th,
+  .stack-table td {
+    padding: .85rem 1.25rem;
+    text-align: left;
+    font-size: .88rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .stack-table th {
+    background: var(--surface);
+    font-family: var(--mono);
+    font-size: .7rem;
+    text-transform: uppercase;
+    letter-spacing: .15em;
+    color: var(--text-dim);
+    font-weight: 500;
+  }
+
+  .stack-table td { background: var(--surface); }
+  .stack-table tr:hover td { background: var(--surface-raised); }
+  .stack-table td:first-child { font-weight: 600; color: var(--cream); }
+
+  /* ─── RELEASE NOTES ─── */
+  .release-body h3 {
+    font-family: var(--body);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--amber);
+    margin: 1.5rem 0 .5rem;
+  }
+
+  .release-body ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .release-body li {
+    position: relative;
+    padding-left: 1.2em;
+    margin-bottom: .4rem;
+  }
+
+  .release-body li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--amber-soft);
+    font-weight: 700;
+  }
+
+  .release-body code {
+    font-family: var(--mono);
+    font-size: .82em;
+    color: var(--amber);
+    background: var(--surface);
+    padding: .1em .4em;
+    border-radius: 3px;
+  }
+
+  .release-body a { color: var(--amber); }
+  .release-body a:hover { color: var(--cream); }
+
+  /* ─── DIVIDER ─── */
+  .divider {
+    max-width: 1000px;
+    margin: 0 auto;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, var(--border) 20%, var(--border-glow) 50%, var(--border) 80%, transparent 100%);
+  }
+
+  /* ─── FOOTER ─── */
+  footer {
+    text-align: center;
+    padding: 5rem 1.5rem 4rem;
+    color: var(--text-dim);
+    font-size: .9rem;
+  }
+
+  footer .tagline {
+    font-family: var(--display);
+    font-size: 1.5rem;
+    font-style: italic;
+    color: var(--amber-soft);
+    margin-bottom: .75rem;
+  }
+
+  footer .sub { font-family: var(--mono); font-size: .75rem; letter-spacing: .1em; }
+
+  footer .links {
+    margin-top: 2rem;
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  footer .links a {
+    font-family: var(--mono);
+    font-size: .8rem;
+    color: var(--text-dim);
+    letter-spacing: .05em;
+    transition: color .2s;
+  }
+  footer .links a:hover { color: var(--amber); }
+
+  /* ─── ANIMATIONS ─── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    opacity: 0;
+    animation: fadeUp .7s ease forwards;
+  }
+  .d1 { animation-delay: .1s; }
+  .d2 { animation-delay: .2s; }
+  .d3 { animation-delay: .35s; }
+  .d4 { animation-delay: .5s; }
+  .d5 { animation-delay: .65s; }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 768px) {
+    .feat-grid { grid-template-columns: 1fr; }
+    .steps { grid-template-columns: 1fr; }
+    .hero { min-height: auto; padding: 6rem 1rem 4rem; }
+    .section { padding: 4rem 1rem; }
+  }
+
+  @media (max-width: 480px) {
+    .cta-group { flex-direction: column; align-items: stretch; }
+    .btn { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grain"></div>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<div class="hero">
+  <div class="hero-claw fade-in d1">🦞</div>
+  <h1 class="fade-in d2">Any<em>Claw</em></h1>
+  <p class="hero-sub fade-in d3">OpenClaw + Codex + Claude Code &middot; Android</p>
+  <p class="hero-desc fade-in d4">
+    Three AI coding agents in <strong>one APK</strong>. OpenClaw gateway, Codex CLI,
+    and <strong>Claude Code</strong> (via Claw Code / OpenClaude) &mdash; all running
+    in a full Linux environment on your phone. <strong>No root. No server. No PC.</strong>
+  </p>
+  <div class="cta-group fade-in d5">
+    <a href="https://github.com/friuns2/openclaw-android-assistant/releases/latest/download/app-prod-release.apk" class="btn btn-primary">Download APK</a>
+    <a href="https://play.google.com/store/apps/details?id=gptos.intelligence.assistant&hl=en" class="btn btn-primary" style="background:var(--crimson)">Google Play</a>
+    <a href="https://github.com/friuns2/openclaw-android-assistant" class="btn btn-ghost">GitHub</a>
+    <a href="https://github.com/friuns2/openclaw-android-assistant#quick-start" class="btn btn-ghost">Quick Start</a>
+  </div>
+</div>
+
+<!-- ═══════════════ SCREENSHOTS ═══════════════ -->
+<div class="section" style="text-align:center">
+  <p class="section-label">In action</p>
+  <h2>See it <em>running</em></h2>
+  <div style="display:flex;gap:2rem;justify-content:center;flex-wrap:wrap;margin-top:2rem">
+    <img src="https://raw.githubusercontent.com/friuns2/openclaw-android-assistant/main/screenshots/screenshot.png" alt="OpenClaw Dashboard" style="width:260px;border-radius:12px;border:1px solid var(--border);box-shadow:0 8px 40px rgba(0,0,0,.5)" />
+    <img src="https://raw.githubusercontent.com/friuns2/openclaw-android-assistant/main/screenshots/screenshot2.png" alt="Codex Coding Agent" style="width:260px;border-radius:12px;border:1px solid var(--border);box-shadow:0 8px 40px rgba(0,0,0,.5)" />
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ FEATURES ═══════════════ -->
+<div class="section">
+  <p class="section-label">Capabilities</p>
+  <h2>Three agents, <em>one pocket</em></h2>
+  <p class="section-intro">
+    AnyClaw bundles OpenClaw (personal AI gateway), OpenAI Codex CLI (terminal coding agent),
+    and <strong>Claude Code</strong> (via Claw Code / OpenClaude &mdash; the leaked Claude Code architecture, 48K+ stars)
+    inside a self-contained Android app.
+  </p>
+
+  <div class="feat-grid">
+    <div class="feat">
+      <span class="feat-icon">🦞</span>
+      <h3>OpenClaw Dashboard</h3>
+      <p>Full Control UI &mdash; chat, agents, sessions, skills, Canvas. Runs locally on your device.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">💬</span>
+      <h3>Codex Chat</h3>
+      <p>Conversational coding agent with streaming, reasoning visibility, and multi-thread sessions.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🦀</span>
+      <h3>Claude Code (OpenClaude)</h3>
+      <p>Full Claw Code agent &mdash; 19 tools, query engine, MCP integration, multi-agent swarms. Claude Code architecture on your phone.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🐧</span>
+      <h3>Embedded Linux</h3>
+      <p>Complete Termux-derived userland &mdash; sh, apt, Node.js 24, Python, SSL certs. Extracted from APK.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🔓</span>
+      <h3>Full Auto-Approval</h3>
+      <p>No permission popups. <code style="color:var(--amber);font-family:var(--mono);font-size:.8rem">danger-full-access</code> sandbox mode by default.</p>
+    </div>
+    <div class="feat">
+      <span class="feat-icon">🔋</span>
+      <h3>Background Execution</h3>
+      <p>Foreground service + battery exemption. Keeps running when you switch apps.</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ ARCHITECTURE ═══════════════ -->
+<div class="section">
+  <p class="section-label">Under the hood</p>
+  <h2>Four layers, <em>one device</em></h2>
+
+  <div class="arch-wrap">
+    <div class="arch-header">
+      <span class="arch-dot"></span>
+      <span class="arch-dot"></span>
+      <span class="arch-dot"></span>
+    </div>
+    <div class="arch-body">
+<pre>
+<span class="dim">┌────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>                    <span class="hl">Android APK</span>                         <span class="dim">│</span>
+<span class="dim">│</span>                                                        <span class="dim">│</span>
+<span class="dim">│</span>  <span class="grn">WebView (Vue.js)</span>  ←→  <span class="hl">CodexServerManager</span>              <span class="dim">│</span>
+<span class="dim">│</span>                                                        <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">┌──────────────────────────────────────────────────┐</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>  <span class="grn">codex-web-local</span>   → :18923  (HTTP + Vue UI)    <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>    └─ codex app-server  (Rust/musl, JSON-RPC)    <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>                                                  <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>  <span class="hl">openclaw gateway</span>  → :18789  (WebSocket)         <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>  <span class="hl">openclaw ctrl UI</span>  → :19001  (Static files)      <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>                                                  <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>                                                  <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>  <span class="grn">claw-code agent</span>   → Claude Code (OpenClaude)    <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>                                                  <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">│</span>  proxy.js          → :18924  (CONNECT, DNS/TLS)  <span class="dim">│</span>  <span class="dim">│</span>
+<span class="dim">│</span>  <span class="dim">└──────────────────────────────────────────────────┘</span>  <span class="dim">│</span>
+<span class="dim">└────────────────────────────────────────────────────────┘</span>
+</pre>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ STARTUP ═══════════════ -->
+<div class="section">
+  <p class="section-label">Boot sequence</p>
+  <h2>From cold start to <em>ready</em></h2>
+
+  <div class="steps">
+    <div class="step">
+      <h3>Battery &amp; Service</h3>
+      <p>Request Doze exemption. Start foreground service with persistent notification.</p>
+    </div>
+    <div class="step">
+      <h3>Bootstrap Extraction</h3>
+      <p>Extract Termux bootstrap zip into app&rsquo;s private storage. Fix hardcoded paths.</p>
+    </div>
+    <div class="step">
+      <h3>Node.js &amp; Toolchain</h3>
+      <p>Install Node.js 24, Python, clang/cmake/make/lld for native module builds.</p>
+    </div>
+    <div class="step">
+      <h3>OpenClaw + koffi</h3>
+      <p>Install OpenClaw globally. Build koffi FFI module from source with Termux toolchain.</p>
+    </div>
+    <div class="step">
+      <h3>Claw Code / OpenClaude</h3>
+      <p>Install Claude Code agent (Claw Code). 19 tools, query engine, MCP, multi-agent swarms.</p>
+    </div>
+    <div class="step">
+      <h3>Codex CLI + Binary</h3>
+      <p>Extract server bundle. Download native Rust binary from npm registry.</p>
+    </div>
+    <div class="step">
+      <h3>Proxy + Auth + Launch</h3>
+      <p>Start CONNECT proxy, OAuth login, gateway, Control UI server, then load WebView.</p>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ QUICK START ═══════════════ -->
+<div class="section">
+  <p class="section-label">Get started</p>
+  <h2>Build from <em>source</em></h2>
+
+  <div class="code-card">
+    <div class="code-tab">terminal</div>
+    <div class="code-body">
+<code><span class="cmt"># clone</span>
+git clone https://github.com/friuns2/openclaw-android-assistant.git
+cd openclaw-android-assistant
+
+<span class="cmt"># build frontend</span>
+npm install && npm run build
+
+<span class="cmt"># prepare android</span>
+cd android && bash scripts/download-bootstrap.sh
+
+<span class="cmt"># build + install + launch</span>
+bash scripts/build-server-bundle.sh && ./gradlew assembleDebug \
+  && adb install -r app/build/outputs/apk/debug/app-debug.apk \
+  && adb shell am start -n com.codex.mobile/.MainActivity</code>
+    </div>
+  </div>
+  <p style="margin-top:1.5rem;color:var(--text-dim);font-size:.9rem">
+    Or just <a href="https://github.com/friuns2/openclaw-android-assistant/releases/latest/download/app-prod-release.apk">download the latest APK</a> directly.
+  </p>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ TECH STACK ═══════════════ -->
+<div class="section">
+  <p class="section-label">Stack</p>
+  <h2>What&rsquo;s <em>inside</em></h2>
+
+  <table class="stack-table">
+    <thead><tr><th>Layer</th><th>Technology</th><th>Version</th></tr></thead>
+    <tbody>
+      <tr><td>AI Gateway</td><td>OpenClaw</td><td>2026.2.21</td></tr>
+      <tr><td>AI Agent</td><td>OpenAI Codex CLI</td><td>0.104.0</td></tr>
+      <tr><td>AI Agent</td><td>Claw Code / OpenClaude (Claude Code)</td><td>latest</td></tr>
+      <tr><td>Model</td><td>gpt-5.3-codex (via Codex OAuth)</td><td>&mdash;</td></tr>
+      <tr><td>Runtime</td><td>Node.js (Termux)</td><td>24.13.0</td></tr>
+      <tr><td>Native</td><td>Rust (musl, aarch64)</td><td>&mdash;</td></tr>
+      <tr><td>Frontend</td><td>Vue.js 3 + Vite + Tailwind</td><td>3.x</td></tr>
+      <tr><td>Android</td><td>Kotlin + WebView</td><td>2.1.0</td></tr>
+      <tr><td>Linux</td><td>Termux bootstrap (aarch64)</td><td>&mdash;</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════ RELEASE NOTES ═══════════════ -->
+<div class="section" id="release">
+  <p class="section-label">Latest upstream release</p>
+  <!-- RELEASE_START -->
+  <h2><em>openclaw 2026.9.7</em></h2>
+  <p class="release-date" style="font-family:var(--mono);font-size:.8rem;color:var(--text-dim);margin-bottom:2rem">Released Sep 30, 2026</p>
+  <div class="release-body" style="color:var(--text-dim);font-size:.92rem;line-height:1.75;max-width:800px">
+  <h3>Changes</h3>
+    <ul>
+    <li>Worktree sessions: start a new chat in an isolated managed worktree from web, iOS, or Android so parallel sessions on one repository no longer collide</li>
+    <li>Voice: Talk, Discord voice, FaceTime, and Twilio voice calls share one agent context, so voice answers about other sessions delegate to the agent instead of denying that work, and read-only lookups no longer ask for spoken confirmation. (#159548, #159474, #156151) @VACInc, and @Peetiegonzalez</li>
+    <li>Role model limits: administrators can give named operator roles a model policy that native agents, Visitor Access, model pickers, and plugin completions enforce, with denials keeping their documented authorization error code. (#156346, #154893, #154839, #156604) and @obviyus</li>
+    <li>Chat-driven setup: owners can hand their agent an API key, a config change, or an edit to a skill they own directly in chat, agents stop refusing or arguing over ordinary requested work while tool policy, sandboxing, and approvals still decide what needs confirmation, and OpenClaw change approvals now complete in the requesting chat with Allow once and Deny buttons or `/approve &lt;id&gt;`. (#158120, #157447, #157947) @jalehman, and @joshavant</li>
+    <li>Desktop audio: listen to managed desktop application sound from the docked desktop panel or the standalone desktop view, with isolated per-application audio on managed Linux desktops, playback tied to screen authorization, and setup warnings kept in a tooltip. (#157718, #157720, #157722, #157723, #157724, #157726, #159487)</li>
+    <li>Working status: show the agent&#x27;s latest commentary as a live status line while it works, clearing when the run ends and keeping approval and startup messages first</li>
+    <li>Chat media: preview PDF attachments inline, move between expanded videos within a chat turn, and copy your own messages as Markdown. (#148399, #154051, #156563) @vyctorbrzezowski, and @VACInc</li>
+    <li>New sessions: set `gateway.controlUi.newSessionModelDefaults: &quot;configured&quot;` to start fresh sessions from the agent&#x27;s configured model, runtime, and thinking defaults instead of the last-used choices; the default stays `&quot;last-used&quot;`</li>
+    <li>Sidebar and presence: organize session filters in one panel, show GitHub merge and closure dates beside sidebar badges, see Open and Running session counts beside online people, and show active collaborators below typing previews. Fixes #150456. (#150605, #158081, #160022, #159263) @vincentkoc, and @shakkernerd</li>
+    <li>Activity: open the Sessions tab with a Today pulse of hourly activity and counts that follow the current filters, highlight whole session rows on hover and focus, and quiet the row actions</li>
+    <li>Profile and preferences: see what your connection is allowed to do in plain language with a Reconnect action after access changes, and choose to open links in an external browser. Fixes #159884. (#156304, #159887) and @VACInc</li>
+    <li>Model pickers: group decision models by provider and drop the hover tooltip from the model picker. (#155301, #158697) and @vyctorbrzezowski</li>
+    <li>Chat tables: move table controls below the content, size desktop tables to their content, avoid unnecessary scrolling, and keep column order when expanding right-to-left tables. (#159924, #156874, #156750, #156947)</li>
+    <li>macOS app: let the macOS app embed the web conversation pane next to its native sidebar, with the chat header sitting in the native titlebar row. (#159739, #159932)</li>
+    <li>Channels: set `requireMentionInBotThreads: false` to accept unmentioned follow-ups only in threads the bot created, across Discord, Slack, Telegram, Matrix, Mattermost, Microsoft Teams, iMessage, Feishu, and other supported channels. Fixes #157698</li>
+    <li>Android chat: operate the agent browser inside chat with collapse and close controls, use a streamlined composer and attachment menu, find models despite typos or multiple search terms, see tool outcomes in collapsed work, and open context usage from the session menu. (#159767, #157799, #159725, #156950, #159733)</li>
+    <li>Android setup and Overview: give saved gateways persistent local names, grant optional setup permissions together, open Settings beside the gateway selector, and read clearer node availability and paired-device explanations with realigned icons that separate work pages from settings. (#159714, #159727, #159718, #157746, #159732, #159961)</li>
+    <li>macOS: renew a saved Gateway&#x27;s Cloudflare Access browser sign-in before it expires instead of signing the app out every session lifetime</li>
+    <li>CLI: `openclaw --help` returns faster, and commands that do not need channel options skip resolving them at startup. and @obviyus</li>
+    <li>Model pricing: price each route by whoever bills it, so an OpenRouter promotion no longer lowers cost estimates for OpenAI direct or other gateways, and download the smaller v2 hosted catalog with ordered model recommendations. (#156518, #156530, #156535, #158863) and @obviyus</li>
+    <li>Anthropic: bare `opus` and new Anthropic API, CLI, and media setup select Claude Opus 5.5 while explicit Opus 5 selections stay pinned, and thinking-display preferences reach Anthropic transports</li>
+    <li>Gemini: add an opt-in `google-interactions` API backend for Gemini Interactions text, image, reasoning, and tool-call workflows. and @RomneyDa</li>
+    <li>Telnyx: install Telnyx as an official external model provider through normal onboarding. and @jalehman</li>
+    <li>Codex: opt in to Ultrafast with `plugins.entries.codex.config.appServer.enableUltrafast`, used only when the selected model advertises it while other models keep their current speed. and @sjf</li>
+    <li>Crabbox: run applications inside a Crabbox lease with `openclaw crabbox run --model` using a protected model credential that never leaves its original host</li>
+    <li>Browser: try opt-in Lightpanda semantic profiles with a portable deployment, and verify the Chromium headless shell across platforms. (#154359, #154360, #154396)</li>
+    <li>Browser sessions: let session writers use an isolated dashboard browser for their own session, show only the current session&#x27;s tabs in the chat Browser panel, and use the Gateway `publicOrigin` as the default browser origin. (#156371, #159891, #157170)</li>
+    <li>Plugins: see declared plugin capabilities, setup guides, and tool inputs in detail previews, browse curated categories with a new Computer use shelf, and get consistent white icon tiles for bundled logos. (#157956, #157946, #158686, #155259)</li>
+    <li>Incognito sessions: expire Incognito sessions after 24 hours, keep their agent turns out of task records and logs, and stop their terminals when the session is reset. (#155596, #157543, #159207)</li>
+    <li>Uploads: let operators disable client file and image uploads to the Gateway. Fixes #158556</li>
+    <li>iOS connections: recognize when an external authorization provider requires browser sign-in before connecting, pause automatic reconnect, and offer a Retry action instead of treating it as a network failure. (#147070, #157454, #157457)</li>
+    <li>Subagents: clarify when research is worth delegating with `sessions_spawn` and how to follow up on a stalled child by checking execution and delivery status instead of loop-polling. and @jalehman</li>
+    <li>Decision models: add the `decision_evaluate` tool for Boolean, Choice, and Score questions against an agent&#x27;s configured decision model, with provider capabilities listed in `models.list`, and keep fallback working when a provider rejects the input. (#155134, #156746) and @jalehman</li>
+    <li>Portals: let collaborators open session-scoped interactive previews from dedicated worker attachments through a restricted `portal` tool, without global host-port access</li>
+    <li>Meetings: add experimental duplicate-safe Google Meet participation with retained caption context and speaker provenance</li>
+    <li>Faster sessions and history: speed up session lists, chat history pages, archived session search, transcript appends, new conversation creation, subagent context loading, and automatic maintenance on busy stores, with fewer repeated scans, reloads, and refresh storms. (#155995, #156055, #156665, #157043, #157572, #157582, #157622, #158397, #158648, #158809, #158961, #159153, #159155, #159309, #159328, #159449, #159456, #159585, #159742, #159900, #158394, #159994, #159647, #159152, #159475, #156830, #158771, #158433, #158559, #158660, #159286, #159710, #159780, #159898, #158859, #158326, #158345, #156400, #158073, #158878, #158885, #159083) and @chopin-op60</li>
+    <li>Faster multi-client Gateway: reduce CPU and traffic when many browsers connect, reconnect, or watch the same chats by spreading reconnect attempts, streaming append deltas, reusing prepared identities, avatars, auth status, and message encodings, sharing pending approval replay, and skipping unchanged roster publications. (#158497, #158536, #158942, #160150, #158555, #158587, #155997, #158552, #158649, #158595, #158597, #156335, #156784, #156358, #158627, #158586, #158803, #158833, #159595, #158643, #158572, #159460, #159457, #158591)</li>
+    <li>Faster agent turns: keep buffered Anthropic streams responsive, serialize large model requests once, reuse Code Mode workers and sandbox classification, stop per-evaluation watchdog threads, unblock session lanes after no-progress loops, and cut tool catalog and validation overhead. (#156054, #156066, #156872, #157021, #158410, #158428, #158610, #158805, #158837, #158872, #159082, #159464, #159574, #152066, #157233, #156800) and @vincentkoc</li>
+    <li>Faster startup, cloud, and automation work: reduce startup placement work, prepare first cloud dispatch artifacts in parallel, stop polling checkout and PR state for idle sessions, and reuse unchanged artifact list summaries, and speed up concurrent automation lists, new chat bursts, and pairing commits. (#157079, #158065, #158525, #159301, #159390, #159520, #159102, #158941, #157113, #156801, #158077, #158665, #156387, #158867, #158779, #157776, #159537)</li>
+    <li>Diagnostics: identify agents across message and model-call traces, trace completed harness commentary, and report blocked CPU profiler starts, waiting or failed lane tasks, live worker counts per pool, heap allocation attribution, and guarded heap snapshot diffs. (#156018, #156343, #158361, #158549, #158561, #159892, #160040) @ryan-dyer-sp, and @vincentkoc</li>
+    <li>Session access: people with session-only grants can read visible conversations, receive updates, copy history as Markdown, and rename, pin, archive, and restore their own sessions, while other people&#x27;s sessions stay read-only. Guests can now create and control their own sessions. (#155184, #155565)</li>
+    <li>Discord and Slack: accept bot-authored messages by default when `allowBots` is omitted, still subject to existing access and mention rules (explicit `false` and `&quot;mentions&quot;` are unchanged), and keep parent context when someone replies to a bot&#x27;s Discord message</li>
+    <li>People and presence: agents can use the `presence` tool to list who is online and which device produced a person&#x27;s latest activity, idle people stay shown as online, administrators can merge duplicate profiles with `openclaw users merge`, and members of multi-user Gateways can edit their personal `USER.md` in Profile settings. Fixes #159423 and #155255. (#159117, #159493, #159889, #155256)</li>
+    <li>Ultra mode: use Ultra as a turn-scoped harness mode on OpenClaw and Claude Code runtimes independently of the model&#x27;s maximum reasoning effort, while native Codex keeps its own Ultra behavior. Fixes #155391</li>
+    <li>Terminal access diagnostics: `openclaw exec-policy show` and the agent Tools panel explain why an agent profile hides `exec` and `process`, including configuration sources and the global-to-agent profile hierarchy. Fixes #155914. and @Pegorim</li>
+    <li>Managed updates: OCM-managed installations can request updates from the Control UI and `/update` and follow the OCM job through completion, and failed-update diagnosis now starts only after you click. (#158932, #157359) @fuller-stack-dev, and @vincentkoc</li>
+    <li>Subagents: scope subagent concurrency to each spawning session, report capacity waits as queued execution, and tell models the wait timeout limits. Fixes #156370. (#156381, #156681, #156542)</li>
+    <li>Background commands: show native background commands in Tasks, warn agents when a background command cannot wake them, and keep quiet heartbeats quiet after tool failures. (#158038, #158884, #156174) and @pash-openai</li>
+    <li>Cloud workers: show the live cloud worker pool in Settings and start warm cloud workers and snapshots faster. (#157200, #156380, #156767)</li>
+    <li>Agents API: run isolated restricted sessions so Memory dreaming can write real diary narratives through the Agents API backend. and @sjf</li>
+    <li>Side chat: remove automatic summaries, accept dropped images, and report instead of silently dropping images on text-only models. (#156892, #156840, #156900)</li>
+    <li>HTML widgets: allow widgets up to 10 MiB</li>
+    <li>Faster sessions: reduce Gateway CPU for session listing, concurrent viewers, activity broadcasts, chat history catch-up, streamed replies, and mention suggestions, and parse streamed SSE incrementally with CR-framed events accepted. (#156221, #157120, #158346, #158408, #158469, #159182, #158481, #158503, #157552, #154929, #158395, #158444, #156817, #156922, #158792)</li>
+    <li>Faster databases: reuse prepared statements and schema facts, shorten agent database admission checks, keep idle agent databases open for thirty minutes, preserve database witnesses across managed restarts, and reduce host CPU for agent worker writes. (#154946, #158973, #156643, #157030, #159445, #158405, #159753, #157666, #158750, #158843, #158763, #159876, #158385, #157333)</li>
+    <li>Faster tasks and tools: reduce CPU for task maintenance, trajectory tool-schema redaction, image discovery in text-heavy conversations, meeting transcript lookups, and frontmatter recovery, give swarm collector groups independent lanes, and defer TypeSafe evaluator startup until its first decision. (#156321, #157527, #159271, #156183, #158471, #158871, #158371, #159074, #158374, #158616, #157380, #159004) and @joshavant</li>
+    <li>Config: support `${VAR:-default}` fallback values in config environment substitution instead of passing the expression through unresolved. Fixes #149551. @jalehman, and @z2mi</li>
+    <li>Package updates: let the new release run its own read-only admission checks for configuration, database compatibility, and plugin availability, so an older installed updater no longer refuses an update the candidate can handle; `--admission installed` forces the installed checks, and Git/source updates are unchanged</li>
+    <li>Update status: show quiet per-step progress while staging Git runtimes and after the Gateway startup check, date recorded outcomes, report the preferred Git release target and known scheduler policy, and clear the applying status once a handed-off update finishes. (#153407, #155671, #156227, #157329, #158926, #158301, #158006) @vincentkoc, @shakkernerd, and @joshavant</li>
+    <li>System services: updates now refresh system-scope Gateway services and hand the final privileged restart to the operator instead of failing. Fixes #156409</li>
+    <li>Accounts: show the ChatGPT sign-in email and the selected account&#x27;s identity in provider settings and the composer, release deleted credentials from model defaults and conversations, and offer existing saved accounts during recovery. (#157629, #157745) and @vincentkoc</li>
+    </ul>
+    <h3>Fixes</h3>
+    <ul>
+    </ul>
+  </div>
+  <!-- RELEASE_END -->
+  <p style="margin-top:2rem">
+    <a href="https://github.com/openclaw/openclaw/releases" class="btn btn-ghost" style="display:inline-flex">All Releases</a>
+  </p>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer>
+  <div class="tagline">Three agents. One APK. Your pocket.</div>
+  <div class="sub">They leaked Claude Code. We put it on a phone.</div>
+  <div class="links">
+    <a href="https://github.com/friuns2/openclaw-android-assistant">GitHub</a>
+    <a href="https://github.com/friuns2/openclaw-android-assistant/releases/latest/download/app-prod-release.apk">Download</a>
+    <a href="https://play.google.com/store/apps/details?id=gptos.intelligence.assistant&hl=en">Google Play</a>
+    <a href="https://openclaw.ai">OpenClaw</a>
+    <a href="https://claw-code.codes">Claw Code</a>
+    <a href="https://github.com/openai/codex">Codex CLI</a>
+  </div>
+</footer>
+
+</body>
+</html>
