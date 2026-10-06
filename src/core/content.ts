@@ -173,32 +173,83 @@ export const EN_WORDS: { en: string; ar: string; emoji: string }[] = [
 ];
 
 export function validateContent(): string[] {
+  return validateRegistries({
+    activities: ACTIVITIES, quests: QUESTS, projects: PROJECTS,
+    stories: STORIES, values: VALUES, destinations: DESTINATIONS,
+    buildings: BUILDINGS, zones: ZONES,
+  });
+}
+
+/** Pure registry validator (testable with crafted data; see tests). */
+export function validateRegistries(r: {
+  activities: ActivityMeta[]; quests: QuestDef[]; projects: ProjectDef[];
+  stories: StoryDef[]; values: ValueItem[];
+  destinations: Destination[]; buildings: { id: string }[]; zones: { id: string }[];
+}): string[] {
   const errors: string[] = [];
+  const zoneIds = new Set([...r.zones.map((z) => z.id), 'parents']);
   const actIds = new Set<string>();
-  for (const a of ACTIVITIES) {
+  for (const a of r.activities) {
     if (actIds.has(a.id)) errors.push(`duplicate activity ${a.id}`);
     actIds.add(a.id);
     if (!a.voice) errors.push(`activity ${a.id} missing voice`);
     if (!a.skills.length) errors.push(`activity ${a.id} has no skills`);
+    if (!zoneIds.has(a.zone)) errors.push(`activity ${a.id} unknown zone ${a.zone}`);
   }
-  for (const q of QUESTS) {
+  const questIds = new Set<string>();
+  for (const q of r.quests) {
+    if (questIds.has(q.id)) errors.push(`duplicate quest ${q.id}`);
+    questIds.add(q.id);
     for (const s of q.steps) {
       if (s.activityId && !actIds.has(s.activityId)) errors.push(`quest ${q.id} step ${s.id} unknown activity ${s.activityId}`);
+      if (!zoneIds.has(s.zone)) errors.push(`quest ${q.id} step ${s.id} unknown zone ${s.zone}`);
     }
   }
-  for (const p of PROJECTS) {
+  const buildingIds = new Set(r.buildings.map((b) => b.id));
+  for (const p of r.projects) {
     if (!p.steps.length) errors.push(`project ${p.id} has no steps`);
+    if (p.rewardBuilding && !buildingIds.has(p.rewardBuilding)) errors.push(`project ${p.id} unknown rewardBuilding ${p.rewardBuilding}`);
+    if (p.worldGift?.companion !== undefined && !p.worldGift.companion) errors.push(`project ${p.id} empty companion gift`);
+    const seen = new Set<string>();
+    for (const s of p.steps) {
+      if (seen.has(s.id)) errors.push(`project ${p.id} duplicate step ${s.id}`);
+      seen.add(s.id);
+      if (!s.voice) errors.push(`project ${p.id} step ${s.id} missing voice`);
+    }
   }
-  for (const st of STORIES) {
+  for (const st of r.stories) {
     if (!st.nodes[st.start]) errors.push(`story ${st.id} bad start`);
     for (const [nid, n] of Object.entries(st.nodes)) {
+      if (n.id !== nid) errors.push(`story ${st.id} node key/id mismatch ${nid}`);
       for (const c of n.choices ?? []) {
         if (!st.nodes[c.next]) errors.push(`story ${st.id} node ${nid} bad next ${c.next}`);
+        if (!c.label) errors.push(`story ${st.id} node ${nid} empty choice label`);
       }
     }
   }
-  for (const v of VALUES) {
+  for (const v of r.values) {
     if (!v.source) errors.push(`value ${v.id} missing source`);
+  }
+  // cross-registry id collisions (save data + analytics key on these).
+  // NOTE: buildings live in a separate namespace (world.buildings) and may
+  // legitimately share a concept id with an activity (e.g. activity 'shop'
+  // vs building 'shop') — so buildings are checked only against themselves.
+  const seen = new Map<string, string>();
+  const claim = (id: string, where: string) => {
+    const prev = seen.get(id);
+    if (prev) errors.push(`duplicate id ${id} in ${prev} and ${where}`);
+    else seen.set(id, where);
+  };
+  for (const a of r.activities) claim(a.id, 'activities');
+  for (const q of r.quests) claim(q.id, 'quests');
+  for (const p of r.projects) claim(p.id, 'projects');
+  for (const s of r.stories) claim(s.id, 'stories');
+  for (const v of r.values) claim(v.id, 'values');
+  for (const d of r.destinations) claim(d.id, 'destinations');
+  const seenBuildings = new Set<string>();
+  for (const b of r.buildings) {
+    if (seenBuildings.has(b.id)) errors.push(`duplicate building ${b.id}`);
+    seenBuildings.add(b.id);
   }
   return errors;
 }

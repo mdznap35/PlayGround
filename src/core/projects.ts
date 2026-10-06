@@ -78,5 +78,6 @@ export class ProjectEngine {
     if (!d.world.unlockedZones.includes('museum')) d.world.unlockedZones.push('museum');
     this.persist();
     bus.emit('project:finished', { defId, artifact });
+    bus.emit('nova:mood', { mood: 'celebrate' as const });
   }
 }

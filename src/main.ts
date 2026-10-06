@@ -2,7 +2,9 @@
 
 import './styles.css';
 import { App, type ScreenName } from './core/app';
+import { ambienceFor } from './core/ambience';
 import { bus } from './core/events';
+import { SoundBank } from './core/sound';
 import { NovaGuide, toasts } from './ui/nova';
 import { firstLaunch } from './screens/first';
 import { world } from './screens/world';
@@ -24,6 +26,10 @@ import { quests } from './screens/quests';
 import { parents, applySettings } from './screens/parents';
 
 const app = new App();
+// File-based SFX + zone ambience. Lazy (no startup cost), synth-fallback,
+// offline-safe (precached same-origin files). No visual or learning changes.
+const bank = new SoundBank(app.audio);
+app.audio.bank = { tryPlay: (n) => bank.tryPlay(n) };
 toasts();
 const nova = new NovaGuide((text) => app.voice.speak(text, 'ar', true));
 void nova;
@@ -58,6 +64,12 @@ app.go = (name: ScreenName, param?: string) => {
     window.scrollTo(0, 0);
     routes[name](param);
     app.analytics.track('nav', { name });
+    // Zone ambience: fire-and-forget, never blocks navigation, never throws.
+    try {
+      const bed = ambienceFor(name, param);
+      if (bed) void bank.ambience(bed);
+      else bank.stopAmbience();
+    } catch { /* audio must never break navigation */ }
   } catch (e) {
     console.error('[nav]', e);
     root.innerHTML = '';
@@ -73,8 +85,8 @@ app.go = (name: ScreenName, param?: string) => {
   }
 };
 
-// global tap unlocks audio (mobile autoplay policy)
-window.addEventListener('pointerdown', () => app.audio.unlock(), { passive: true });
+// global tap unlocks audio (mobile autoplay policy) + warms the file bank
+window.addEventListener('pointerdown', () => { app.audio.unlock(); bank.prime(); }, { passive: true });
 bus.on('save:reset', () => { applySettings(app); });
 // live purse: every reward refreshes visible coin counters without re-render
 bus.on('toast', () => {

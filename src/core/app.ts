@@ -72,6 +72,7 @@ export class App {
                 qp.done = true;
                 this.save.update((d) => { d.world.coins += q.rewardCoins; });
                 bus.emit('toast', { text: `🏆 أنهيت مغامرة ${q.title}! +${q.rewardCoins} 🪙` });
+                bus.emit('nova:mood', { mood: 'celebrate' as const });
                 this.audio.sfx('win');
                 this.voice.speak(`رائع! أنهيت مغامرة ${q.title}!`);
               }

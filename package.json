@@ -8,12 +8,22 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run tests",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "gates": "node scripts/quality-gates.mjs"
   },
-  "dependencies": {},
+  "dependencies": {
+    "dexie": "4.4.6",
+    "gsap": "3.15.0",
+    "howler": "2.2.4"
+  },
   "devDependencies": {
-    "typescript": "^5.6.3",
-    "vite": "^6.0.3",
-    "vitest": "^2.1.8"
+    "@types/howler": "2.2.13",
+    "@types/node": "26.6.4",
+    "fake-indexeddb": "6.2.3",
+    "sharp": "0.35.5",
+    "typescript": "5.9.3",
+    "vite": "6.4.3",
+    "vite-plugin-pwa": "2.0.0",
+    "vitest": "2.1.9"
   }
 }

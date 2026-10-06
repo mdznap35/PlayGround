@@ -23,6 +23,8 @@ export type SkillId =
   // life
   | 'selfcare' | 'safety' | 'emotions' | 'communication' | 'values';
 
+export type Difficulty = 0 | 1 | 2; // gentle → brave → hero (also recorded per attempt)
+
 export interface AttemptEvidence {
   activityId: string;
   skillIds: SkillId[];
@@ -31,6 +33,10 @@ export interface AttemptEvidence {
   tries: number;
   hintsUsed: number;
   errorKind?: string;
+  /** child tried a different approach than the previous attempt (self-correction signal) */
+  strategyChanged?: boolean;
+  /** difficulty level this attempt ran at — evidence for mastery/transfer, not a score */
+  difficulty?: Difficulty;
   at: number;
 }
 

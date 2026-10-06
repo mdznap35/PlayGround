@@ -3,7 +3,7 @@
 
 import type { Settings } from './types';
 
-type SfxName = 'tap' | 'good' | 'bad' | 'coin' | 'build' | 'splash' | 'pop' | 'win' | 'step';
+export type SfxName = 'tap' | 'good' | 'bad' | 'coin' | 'build' | 'splash' | 'pop' | 'win' | 'step';
 
 const SFX_FREQ: Record<SfxName, number[]> = {
   tap: [520],
@@ -22,6 +22,13 @@ export class AudioManager {
   private musicNodes: OscillatorNode[] = [];
   private musicTimer: number | null = null;
   settings: Settings | null = null;
+  /**
+   * Optional file bank (SoundBank). When present and handling a sound, the
+   * synth is skipped — no double-play. The bank never calls back into sfx()
+   * for its own fallback... (it calls synth only via bank.play, which
+   * re-enters here and terminates because tryPlay is side-effect-free).
+   */
+  bank: { tryPlay(name: SfxName): boolean } | null = null;
 
   private ensure(): AudioContext | null {
     if (!this.settings?.sfx && !this.settings?.music) return null;
@@ -36,6 +43,9 @@ export class AudioManager {
 
   sfx(name: SfxName): void {
     if (!this.settings?.sfx) return;
+    try {
+      if (this.bank?.tryPlay(name)) return; // file played (or muted) — no double-play
+    } catch { /* bank must never break synth */ }
     const ctx = this.ensure();
     if (!ctx) return;
     const freqs = SFX_FREQ[name];

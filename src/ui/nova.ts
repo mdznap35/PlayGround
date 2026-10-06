@@ -3,12 +3,15 @@
 
 import { bus } from '../core/events';
 import { el } from './helpers';
+import { MoodController, type NovaMood } from './moods';
 
 export class NovaGuide {
   private layer: HTMLElement;
   private bubble: HTMLElement | null = null;
   private lastShown = 0;
   private speak: (text: string) => void;
+  /** Emotional state for the 2.0 character layer (CSS hooks only for now). */
+  readonly moods = new MoodController();
 
   constructor(speak: (text: string) => void) {
     this.speak = speak;
@@ -16,6 +19,15 @@ export class NovaGuide {
     this.layer.id = 'nova-layer';
     document.body.append(this.layer);
     bus.on<{ text: string }>('nova:say', ({ text }) => this.say(text, false));
+    bus.on<{ mood: NovaMood }>('nova:mood', ({ mood }) => {
+      this.moods.setMood(mood);
+      this.applyMood();
+    });
+    this.moods.onChange(() => this.applyMood());
+  }
+
+  private applyMood(): void {
+    if (this.bubble) this.bubble.className = `nova-bubble mood-${this.moods.current}`;
   }
 
   say(text: string, voice = true): void {

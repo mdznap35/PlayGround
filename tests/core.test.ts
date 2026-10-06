@@ -114,3 +114,64 @@ describe('save defaults', () => {
     expect(d.version).toBe(2);
   });
 });
+
+describe('adaptive engine: hesitation + self-correction', () => {
+  it('slow outlier pre-arms a cue instead of changing level', () => {
+    const h = [40000, 42000, 44000, 40000].map((durationMs) =>
+      ev({ success: true, tries: 1, hintsUsed: 0, durationMs }));
+    h.push(ev({ success: true, tries: 1, hintsUsed: 0, durationMs: 120000 }));
+    const d = decide(h, 'memory-pairs');
+    expect(d.note).toBe('steady+hesitant');
+    expect(d.difficulty).toBe(1);
+    expect(d.startHintLevel).toBe(1);
+  });
+  it('self-correction after hints scaffolds instead of dropping', () => {
+    const h = [
+      ev({ success: true, tries: 3, hintsUsed: 2, durationMs: 20000 }),
+      ev({ success: true, tries: 2, hintsUsed: 2, durationMs: 18000, strategyChanged: true }),
+      ev({ success: true, tries: 2, hintsUsed: 1, durationMs: 15000 }),
+    ];
+    const d = decide(h, 'memory-pairs');
+    expect(d.note).toBe('adapting');
+    expect(d.difficulty).toBe(1);
+  });
+  it('ignores strategy/difficulty evidence fields it does not need (backward compatible)', () => {
+    const h = [0, 1, 2, 3].map(() => ev({ success: true, difficulty: 1 }));
+    expect(decide(h, 'memory-pairs').difficulty).toBe(2);
+  });
+});
+
+describe('content validation: registries', () => {
+  it('still validates the shipped content cleanly', async () => {
+    const { validateRegistries, ACTIVITIES, QUESTS, PROJECTS, STORIES, VALUES } = await import('../src/core/content');
+    const { DESTINATIONS, BUILDINGS, ZONES } = await import('../src/core/content');
+    expect(validateRegistries({
+      activities: ACTIVITIES, quests: QUESTS, projects: PROJECTS,
+      stories: STORIES, values: VALUES, destinations: DESTINATIONS,
+      buildings: BUILDINGS, zones: ZONES,
+    })).toEqual([]);
+  });
+  it('catches bad zones, buildings, steps, labels, and id collisions', async () => {
+    const { validateRegistries, ACTIVITIES, QUESTS, PROJECTS, STORIES, VALUES } = await import('../src/core/content');
+    const { DESTINATIONS, BUILDINGS, ZONES } = await import('../src/core/content');
+    const badActs = [...ACTIVITIES, { ...ACTIVITIES[0], id: 'x-bad-zone', zone: 'moon' as never }];
+    const badProjs = PROJECTS.map((p, i) => (i === 0
+      ? { ...p, rewardBuilding: 'nope', steps: [...p.steps, p.steps[0]], worldGift: { companion: '' } }
+      : p));
+    const badStories = STORIES.map((s, i) => (i === 0
+      ? { ...s, nodes: { ...s.nodes, [s.start]: { ...s.nodes[s.start], choices: [{ label: '', emoji: 'x', next: s.start }] } } }
+      : s));
+    const badVals = [...VALUES, { ...VALUES[0] }]; // duplicate id
+    const errs = validateRegistries({
+      activities: badActs, quests: QUESTS, projects: badProjs,
+      stories: badStories, values: badVals, destinations: DESTINATIONS,
+      buildings: BUILDINGS, zones: ZONES,
+    });
+    expect(errs.some((e) => e.includes('unknown zone moon'))).toBe(true);
+    expect(errs.some((e) => e.includes('unknown rewardBuilding'))).toBe(true);
+    expect(errs.some((e) => e.includes('duplicate step'))).toBe(true);
+    expect(errs.some((e) => e.includes('empty companion gift'))).toBe(true);
+    expect(errs.some((e) => e.includes('empty choice label'))).toBe(true);
+    expect(errs.some((e) => e.includes('duplicate id v-honesty'))).toBe(true);
+  });
+});

@@ -1,6 +1,23 @@
 /* NOVA Art Direction: warm night-sky world, soft shapes, big touch targets.
    Palette: deep space indigo #1b2350, nova violet #7c6cf0, warm sun #ffc94d,
-   leaf #5fd68a, coral #ff7a7a, sky #7fd4ff, cream #fff6e8. */
+   leaf #5fd68a, coral #ff7a7a, sky #7fd4ff, cream #fff6e8.
+   Type: Baloo Bhaijaan 2 (OFL, bundled locally in /fonts — arabic + latin
+   subsets, variable 500–800). See assets/licenses/OFL-BalooBhaijaan2.txt. */
+
+@font-face {
+  font-family: "Baloo Bhaijaan 2";
+  src: url("/fonts/baloo-arabic.woff2") format("woff2");
+  font-weight: 500 800;
+  font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+08E3-08FF, U+200C-200E, U+FB50-FDFF, U+FE70-FEFC;
+}
+@font-face {
+  font-family: "Baloo Bhaijaan 2";
+  src: url("/fonts/baloo-latin.woff2") format("woff2");
+  font-weight: 500 800;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+2010-2011, U+2E41;
+}
 
 :root {
   --bg0: #141a3d;
@@ -19,7 +36,7 @@
   --radius: 28px;
   --touch: 76px;
   --shadow: 0 12px 32px rgba(10, 12, 40, 0.35);
-  --font: "Segoe UI", "Noto Kufi Arabic", "Tahoma", system-ui, sans-serif;
+  --font: "Baloo Bhaijaan 2", "Segoe UI", "Noto Kufi Arabic", "Tahoma", system-ui, sans-serif;
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -155,6 +172,10 @@ p.lead { font-size: clamp(17px, 2.6vw, 21px); color: #d9d7ff; text-align: center
 }
 @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 .nova-text { font-size: 18px; font-weight: 700; flex: 1; line-height: 1.7; }
+/* Mood hooks for the 2.0 character layer (subtle; full art direction deferred). */
+.nova-bubble.mood-celebrate { animation: nova-pop 0.6s ease; border-color: var(--sun); }
+.nova-bubble.mood-think { border-style: dashed; }
+@keyframes nova-pop { 0% { transform: scale(0.92); } 45% { transform: scale(1.03); } 100% { transform: scale(1); } }
 .nova-hear {
   border: none; border-radius: 16px; min-width: 56px; min-height: 56px; font-size: 26px;
   background: var(--sun); cursor: pointer;

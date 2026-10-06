@@ -2,9 +2,9 @@
    error kinds, hint dependence, and retry-after-hint success to pick
    difficulty + scaffolding for the next round. */
 
-import type { AttemptEvidence } from './types';
+import type { AttemptEvidence, Difficulty } from './types';
 
-export type Difficulty = 0 | 1 | 2; // gentle → brave → hero
+export type { Difficulty };
 
 export interface AdaptiveDecision {
   difficulty: Difficulty;
@@ -26,6 +26,13 @@ export function decide(history: AttemptEvidence[], activityId: string): Adaptive
   const avgTime = h.reduce((s, a) => s + a.durationMs, 0) / h.length;
   const last = h[h.length - 1];
   const sameErrorRepeat = h.length >= 3 && h.slice(-3).every((a) => !a.success && a.errorKind && a.errorKind === last.errorKind);
+  // hesitation: last attempt took far longer than this activity's own median.
+  // Relative (not absolute) so slow-but-steady activities aren't punished.
+  const sorted = h.map((a) => a.durationMs).sort((x, y) => x - y);
+  const median = sorted[Math.floor(sorted.length / 2)];
+  const hesitant = h.length >= 3 && last.durationMs > Math.max(30000, 2.5 * median);
+  // self-correction: child changed approach and then succeeded — scaffold, don't drop.
+  const adapted = h.slice(-3).some((a) => a.strategyChanged && a.success);
 
   // struggling: slow, many tries, hint-dependent, repeating same error
   if (sameErrorRepeat || (winRate < 0.4 && avgTries > 2.5) || avgHints >= 2) {
@@ -38,7 +45,15 @@ export function decide(history: AttemptEvidence[], activityId: string): Adaptive
   }
   // hint-dependent success: same level, pre-arm a visual cue
   if (winRate >= 0.6 && avgHints >= 1) {
+    if (adapted) return { difficulty: 1, offerExample: false, startHintLevel: 1, note: 'adapting' };
+    if (hesitant) return { difficulty: 1, offerExample: false, startHintLevel: 1, note: 'fade-hints+hesitant' };
     return { difficulty: 1, offerExample: false, startHintLevel: 1, note: 'fade-hints' };
+  }
+  if (adapted && winRate >= 0.5) {
+    return { difficulty: 1, offerExample: false, startHintLevel: 1, note: 'adapting' };
+  }
+  if (hesitant) {
+    return { difficulty: 1, offerExample: false, startHintLevel: 1, note: 'steady+hesitant' };
   }
   return { difficulty: 1, offerExample: false, startHintLevel: 0, note: 'steady' };
 }
