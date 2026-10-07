@@ -111,7 +111,7 @@ describe('save defaults', () => {
     expect(d.world.buildings).toContain('home');
     expect(d.world.coins).toBeGreaterThan(0);
     expect(d.settings.voice).toBe(true);
-    expect(d.version).toBe(2);
+    expect(d.version).toBe(3);
   });
 });
 

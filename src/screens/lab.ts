@@ -5,10 +5,11 @@
 import type { App } from '../core/app';
 import { decide } from '../core/adaptive';
 import { bus } from '../core/events';
-import { drawNova, type NovaMood } from '../engine/art';
+import { drawNova, lookFromAvatar, type NovaMood } from '../engine/art';
 import { Feedback, spotlight } from '../engine/feedback';
 import { WorldScene, type SceneObj } from '../engine/scene';
 import { bigButton, choice, choiceRow, el, title } from '../ui/helpers';
+import { BLOOM_ART, applyBloom, mysteryPhase, plantSeed, type BloomGift } from '../world/mystery';
 import { mountScreen } from './shell';
 
 export function lab(app: App, root: HTMLElement, param?: string): void {
@@ -66,6 +67,17 @@ function labRoom(app: App, root: HTMLElement): void {
   let correct = 0;
   const t0 = Date.now();
   const finished = { done: false };
+
+  // ---- Mystery Crate mission (the vertical slice): state derived from museum
+  let phase = mysteryPhase(app.save.data.museum);
+  let seedHere = phase !== 'find';
+  let bloomGift: BloomGift | null = null;
+  let bloomT0 = 0;
+  let bloomGranted = false;
+  let magnetNext = false;
+  const SEED = { x: 500, y: 252 };
+  const POT = { x: 712, y: 500 };
+  const CRATE = { x: 285, y: 478 };
 
   const say = (text: string) => {
     bus.emit('nova:say', { text });
@@ -215,6 +227,171 @@ function labRoom(app: App, root: HTMLElement): void {
   scene.addObject(magnetSt);
   scene.addObject(lampSt);
 
+  // ---------- Mystery Crate (find phase) ----------
+  if (phase === 'find') {
+    const crate: SceneObj = {
+      id: 'crate', x: CRATE.x, y: CRATE.y, r: 46, depth: 479,
+      draw: (ctx, t) => {
+        const wob = !rm && (t / 1) % 3000 < 400 ? Math.sin(t / 90) * 3 : 0;
+        ctx.save();
+        ctx.translate(CRATE.x + wob, CRATE.y);
+        ctx.fillStyle = '#b07a45';
+        ctx.fillRect(-34, -30, 68, 56);
+        ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 3;
+        ctx.strokeRect(-34, -30, 68, 56);
+        ctx.beginPath(); ctx.moveTo(-34, -8); ctx.lineTo(34, -8); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(0, 26); ctx.stroke();
+        ctx.font = '30px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText('؟', 0, -38);
+        // drips: something alive is inside
+        if (!rm) {
+          ctx.fillStyle = '#5db9f5';
+          const dy = (t / 700) % 26;
+          ctx.globalAlpha = 1 - dy / 26;
+          ctx.beginPath(); ctx.arc(20, 28 + dy, 3, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+        ctx.restore();
+        spotlight(ctx, CRATE.x, CRATE.y, 44, t, rm);
+      },
+      onTap: () => {
+        fx.win(CRATE.x, CRATE.y - 30);
+        setMood('discover', 2200);
+        app.save.update((d) => { plantSeed(d); });
+        app.save.saveNow();
+        phase = 'grow';
+        seedHere = true;
+        scene.removeObject('crate');
+        say('انفتح! أشياء غريبة… وبذرة نائمة! جرّب الأشياء في الماء لتصحى البذرة!');
+      },
+    };
+    scene.addObject(crate);
+  }
+
+  // ---------- sleepy seed (grow phase): drinks every correct prediction ----------
+  const seedObj: SceneObj = {
+    id: 'seed', x: SEED.x, y: SEED.y, r: 30, depth: 210,
+    draw: (ctx, t) => {
+      if (!seedHere || bloomGift) return;
+      const glow = 10 + correct * 5;
+      ctx.fillStyle = 'rgba(255,215,110,0.35)';
+      ctx.beginPath(); ctx.arc(SEED.x, SEED.y, glow + (rm ? 0 : Math.sin(t / 500) * 3), 0, Math.PI * 2); ctx.fill();
+      ctx.font = '30px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('🌰', SEED.x, SEED.y + (rm ? 0 : Math.sin(t / 700) * 3));
+      if (correct === 0) spotlight(ctx, SEED.x, SEED.y - 26, 22, t, rm);
+    },
+    onTap: () => {
+      fx.discover(SEED.x, SEED.y);
+      say(seedHere ? 'البذرة نائمة… كل توقع صحيح يسقيها!' : 'لا بذرة بعد… المس الصندوق العجيب!');
+    },
+  };
+  scene.addObject(seedObj);
+
+  // ---------- gift orbs + bloom (finale, live session state) ----------
+  const ORBS: { gift: BloomGift; emoji: string; x: number }[] = [
+    { gift: 'sun', emoji: '☀️', x: 440 },
+    { gift: 'leaf', emoji: '🍃', x: 500 },
+    { gift: 'star', emoji: '⭐', x: 560 },
+  ];
+  let orbsOut = false;
+  for (const o of ORBS) {
+    const orb: SceneObj = {
+      id: `orb-${o.gift}`, x: o.x, y: 236, r: 34, depth: 211,
+      draw: (ctx, t) => {
+        if (!orbsOut || bloomGift) return;
+        const bob = rm ? 0 : Math.sin(t / 600 + o.x) * 4;
+        ctx.font = '38px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(o.emoji, o.x, 236 + bob);
+        if (o.gift === 'sun') spotlight(ctx, o.x, 236 + bob, 30, t, rm);
+      },
+      onTap: () => {
+        if (!orbsOut || bloomGift) return;
+        bloomGift = o.gift;
+        bloomT0 = rm ? 0 : performance.now();
+        bloomGranted = false;
+        fx.win(o.x, 236);
+        setMood('discover', 3000);
+        say(o.gift === 'sun' ? 'شمس دافئة!' : o.gift === 'leaf' ? 'ورقة خضراء!' : 'نجمة لامعة!');
+      },
+    };
+    scene.addObject(orb);
+  }
+  const bloomObj: SceneObj = {
+    id: 'bloom', x: POT.x, y: POT.y, r: 0.0001, depth: 480,
+    draw: (ctx, t) => {
+      if (!bloomGift) return;
+      const art = BLOOM_ART[bloomGift];
+      const p = rm ? 1 : Math.min(1, (t - bloomT0) / 2200);
+      // pot
+      ctx.fillStyle = '#c96f4a';
+      ctx.fillRect(POT.x - 22, POT.y - 6, 44, 26);
+      ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 3;
+      ctx.strokeRect(POT.x - 22, POT.y - 6, 44, 26);
+      // stem
+      const h = 64 * p;
+      ctx.strokeStyle = '#3f8a4f'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(POT.x, POT.y - 6); ctx.lineTo(POT.x, POT.y - 6 - h); ctx.stroke();
+      // leaves
+      if (p > 0.4) {
+        ctx.fillStyle = '#5fd68a';
+        ctx.beginPath(); ctx.ellipse(POT.x - 12 * p, POT.y - 6 - h * 0.5, 10 * p, 5 * p, -0.5, 0, Math.PI * 2); ctx.fill();
+      }
+      // bloom head
+      if (p > 0.6) {
+        const q = (p - 0.6) / 0.4;
+        const cy = POT.y - 6 - h;
+        ctx.fillStyle = art.petal;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.ellipse(POT.x + Math.cos(a) * 13 * q, cy + Math.sin(a) * 13 * q, 9 * q, 6 * q, a, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = '#fff3cf';
+        ctx.beginPath(); ctx.arc(POT.x, cy, 8 * q, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 2; ctx.stroke();
+      }
+      if (p >= 1 && !bloomGranted) {
+        bloomGranted = true;
+        grantBloom();
+      }
+    },
+  };
+  scene.addObject(bloomObj);
+
+  // ---------- magnet glow (continuation: the next mystery calls) ----------
+  const magnetGlow: SceneObj = {
+    id: 'magnet-glow', x: 865, y: 405, r: 0.0001, depth: 404,
+    draw: (ctx, t) => {
+      if (!magnetNext) return;
+      ctx.strokeStyle = `rgba(255,205,90,${rm ? 0.65 : 0.45 + 0.3 * Math.sin(t / 300)})`;
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.arc(865, 405, 62, 0, Math.PI * 2); ctx.stroke();
+    },
+  };
+  scene.addObject(magnetGlow);
+
+  // ---------- grown flower persists in the room (done phase) ----------
+  if (phase === 'done') {
+    const last = app.save.data.museum.filter((m) => m.kind === 'mystery-bloom').slice(-1)[0];
+    const pot: SceneObj = {
+      id: 'pot', x: POT.x, y: POT.y, r: 40, depth: 480,
+      draw: (ctx) => {
+        ctx.fillStyle = '#c96f4a';
+        ctx.fillRect(POT.x - 22, POT.y - 6, 44, 26);
+        ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 3;
+        ctx.strokeRect(POT.x - 22, POT.y - 6, 44, 26);
+        ctx.font = '44px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(last?.emoji ?? '🌻', POT.x, POT.y - 52);
+      },
+      onTap: () => {
+        fx.discover(POT.x, POT.y - 40);
+        say('زهرتك العجيبة! كبرت بسبب تجاربك!');
+      },
+    };
+    scene.addObject(pot);
+  }
+
   // ---------- Nova ----------
   const novaObj: SceneObj = {
     id: 'nova', x: 880, y: 560, r: 44, depth: 900,
@@ -223,7 +400,8 @@ function labRoom(app: App, root: HTMLElement): void {
       if (t > novaMood.until && (mood === 'point' || mood === 'think' || mood === 'look')) mood = 'idle';
       if (mood === 'idle' && placed === 0 && !finished.done && !rm) mood = 'point';
       const gx = novaMood.gx ?? (mood === 'point' ? 500 : undefined);
-      drawNova(ctx, 880, 560, 30, { mood, gazeX: gx, gazeY: mood === 'point' ? 120 : undefined }, t, rm);
+      drawNova(ctx, 880, 560, 30, { mood, gazeX: gx, gazeY: mood === 'point' ? 120 : undefined }, t, rm,
+        lookFromAvatar(app.save.data.avatar), app.save.data.avatar.charm);
     },
     onTap: () => {
       fx.discover(880, 530);
@@ -345,7 +523,9 @@ function labRoom(app: App, root: HTMLElement): void {
       fx.oops(it.x, it.y);
       setMood('think', 2000);
     }
-    say(`${it.spec.voice}${match ? ' توقعت صح!' : ''}`);
+    const drink = seedHere && match && phase === 'grow';
+    if (drink) fx.splash(SEED.x, SEED.y);
+    say(`${it.spec.voice}${match ? ' توقعت صح!' : ''}${drink ? ' البذرة تشرب!' : ''}`);
     if (placed >= items.length && !finished.done) {
       finished.done = true;
       window.setTimeout(() => {
@@ -361,12 +541,44 @@ function labRoom(app: App, root: HTMLElement): void {
         app.ctx().earnCoins(7, 'عالِم صغير!');
         say(`مذهل! جرّبت كل شيء! توقعت ${correct} صح! الخفيف يطفو والثقيل يغوص!`);
         import('../ui/helpers').then(({ confetti }) => confetti());
+        // WOW: the sleepy seed wakes — pick one gift and watch it bloom
+        if (seedHere && phase === 'grow' && mysteryPhase(app.save.data.museum) === 'grow') {
+          window.setTimeout(() => {
+            if (!document.body.contains(canvas)) return;
+            orbsOut = true;
+            setMood('discover', 5000);
+            say('صحيت البذرة! اختر لها هدية: شمس؟ ورقة؟ نجمة؟');
+          }, 2500);
+        }
       }, 1200);
     }
   }
 
+  function grantBloom(): void {
+    if (!bloomGift) return;
+    let granted = false;
+    const gift = bloomGift;
+    app.save.update((d) => { granted = applyBloom(d, gift); });
+    app.save.saveNow();
+    if (!granted) return;
+    phase = 'done';
+    magnetNext = true;
+    setMood('celebrate', 3000);
+    bus.emit('nova:mood', { mood: 'celebrate' as const });
+    app.ctx().earnCoins(5, 'زهرة عجيبة!');
+    say('زهرتك! كبرت بسبب تجاربك! صارت في حديقتك! والمغناطيس يلمع… جرّبه!');
+    import('../ui/helpers').then(({ confetti }) => confetti());
+  }
+
   scene.start();
-  say('المس شيئاً من الرف! خمن: فوق أم تحت؟ ثم اسحبه إلى الماء!');
+  if (phase === 'find') {
+    setMood('point', 3500, CRATE.x, CRATE.y);
+    say('ششش! صندوق عجيب في المختبر! المسه وشوف!');
+  } else if (phase === 'grow') {
+    say('البذرة نائمة! كل توقع صحيح يسقيها! المس شيئاً وخمن!');
+  } else {
+    say('مختبرك! زهرتك العجيبة هنا! جرّب مجدداً أو اكتشف المغناطيس!');
+  }
 }
 
 /* ================= light & shadow (kept apparatus view) ================= */

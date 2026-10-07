@@ -23,12 +23,22 @@ export class NovaGuide {
       this.moods.setMood(mood);
       this.applyMood();
     });
+    bus.on<{ mid: string; deep: string }>('avatar:paint', ({ mid, deep }) => this.paintFace(mid, deep));
     this.moods.onChange(() => this.applyMood());
   }
 
   private applyMood(): void {
     if (this.bubble) this.bubble.className = `nova-bubble mood-${this.moods.current}`;
   }
+
+  /** Tint Nova's bubble face to the child's chosen colors (called on pick + boot). */
+  paintFace(mid: string, deep: string): void {
+    this.faceMid = mid; this.faceDeep = deep;
+    const face = this.bubble?.querySelector('.nova-face') as HTMLElement | null;
+    if (face) face.style.background = `radial-gradient(circle at 35% 30%, ${mid}, ${deep} 70%)`;
+  }
+  private faceMid = '#7c6cf0';
+  private faceDeep = '#3c348f';
 
   say(text: string, voice = true): void {
     const now = Date.now();
@@ -37,6 +47,7 @@ export class NovaGuide {
     this.layer.innerHTML = '';
     const b = el('div', 'nova-bubble');
     const face = el('div', 'nova-face', '✨');
+    face.style.background = `radial-gradient(circle at 35% 30%, ${this.faceMid}, ${this.faceDeep} 70%)`;
     const t = el('div', 'nova-text', text);
     const hear = el('button', 'nova-hear', '🔊') as HTMLButtonElement;
     hear.setAttribute('aria-label', 'اسمع مرة أخرى');

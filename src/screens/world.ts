@@ -11,11 +11,13 @@ import { Feedback, breathe, spotlight } from '../engine/feedback';
 import { WorldScene, type SceneObj } from '../engine/scene';
 import { el } from '../ui/helpers';
 import { guideStep } from '../world/guide';
+import { openAvatarPicker } from './avatar';
 import { mountScreen } from './shell';
 import {
   drawBush, drawCave, drawCityHall, drawGarage, drawGate, drawHospital, drawHouse,
   drawLab, drawLibrary, drawMosque, drawMuseum, drawNova, drawPad, drawPine,
   drawStage, drawTreehouse, drawWalker, drawWorkshop, labelPill,
+  lookFromAvatar,
   type NovaMood,
 } from '../engine/art';
 
@@ -38,12 +40,6 @@ const LAYOUT: Record<ZoneId, { x: number; y: number; s: number }> = {
   parents: { x: -100, y: -100, s: 0 },
 };
 
-const NOVA_LINES = [
-  'المسني إن احتجتني! أنا معك!',
-  'عالمك يكبر كلما لعبت!',
-  'شو حابب تكتشف اليوم؟',
-];
-
 const DECOR_LINES: Record<string, string> = {
   bridge: 'جسرك! بنيته بيدك ويعبر النهر!',
   'comp-robot': 'روبوتك يعيش هنا! صنعته أنت!',
@@ -56,7 +52,7 @@ export function world(app: App, root: HTMLElement): void {
   const s = mountScreen(root);
   const d = app.save.data;
 
-  // ---- slim chrome: coins orb + quest pill + parents orb (no titles, no menus)
+  // ---- slim chrome: coins orb + quest pill + beach orb + parents orb (no titles, no menus)
   const chrome = el('div', 'world-chrome');
   const purse = el('button', 'orb purse-orb', `🪙<b>${d.world.coins}</b>`) as HTMLButtonElement;
   purse.setAttribute('aria-label', 'عملاتي');
@@ -75,10 +71,14 @@ export function world(app: App, root: HTMLElement): void {
     questPill.setAttribute('aria-label', 'مغامراتي');
   }
   questPill.onclick = () => { app.audio.sfx('tap'); app.go('quests'); };
+  // doorway to the living beach (the Creative Reset slice) — always one tap away
+  const beach = el('button', 'orb beach-orb', d.hatch?.hatchedAt ? '🌙' : '🥚') as HTMLButtonElement;
+  beach.setAttribute('aria-label', 'شاطئ نوفا');
+  beach.onclick = () => { app.audio.sfx('splash'); app.go('hatch'); };
   const parents = el('button', 'orb parents-orb', '👨‍👩‍👧') as HTMLButtonElement;
   parents.setAttribute('aria-label', 'منطقة الوالدين');
   parents.onclick = () => app.go('parents');
-  chrome.append(purse, questPill, parents);
+  chrome.append(purse, questPill, beach, parents);
   s.append(chrome);
 
   const canvas = document.createElement('canvas');
@@ -491,13 +491,14 @@ export function world(app: App, root: HTMLElement): void {
         gx = L.x; gy = L.y;
       }
       novaObj.x = nova.x; novaObj.y = nova.y;
-      drawNova(ctx, nova.x, nova.y, 30, { mood, gazeX: gx, gazeY: gy }, t, rm);
+      drawNova(ctx, nova.x, nova.y, 30, { mood, gazeX: gx, gazeY: gy }, t, rm,
+        lookFromAvatar(app.save.data.avatar), app.save.data.avatar.charm);
     },
     onTap: () => {
       fx.discover(nova.x, nova.y - 30);
       nova.mood = 'celebrate';
       nova.moodUntil = performance.now() + 900;
-      say(NOVA_LINES[(Math.random() * NOVA_LINES.length) | 0]);
+      openAvatarPicker(app);
     },
   };
   scene.addObject(novaObj);

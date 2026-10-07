@@ -7,7 +7,7 @@
 import type { App } from '../core/app';
 import { decide } from '../core/adaptive';
 import { bus } from '../core/events';
-import { drawNova, drawWalker, type NovaMood } from '../engine/art';
+import { drawNova, drawWalker, lookFromAvatar, type NovaMood } from '../engine/art';
 import { Feedback } from '../engine/feedback';
 import { WorldScene, type SceneObj } from '../engine/scene';
 import { bigButton, choice, choiceRow, el, stage, title } from '../ui/helpers';
@@ -168,7 +168,8 @@ function workshopRoom(app: App, root: HTMLElement): void {
       let mood = novaMood.mood;
       if (t > novaMood.until && (mood === 'point' || mood === 'think' || mood === 'look')) mood = 'idle';
       if (mood === 'idle' && placedCount === 0 && !built.done && !rm) mood = 'point';
-      drawNova(ctx, 830, 560, 30, { mood, gazeX: mood === 'point' ? (novaMood.gx ?? pileX) : undefined, gazeY: mood === 'point' ? (novaMood.gy ?? pileY) : undefined }, t, rm);
+      drawNova(ctx, 830, 560, 30, { mood, gazeX: mood === 'point' ? (novaMood.gx ?? pileX) : undefined, gazeY: mood === 'point' ? (novaMood.gy ?? pileY) : undefined }, t, rm,
+        lookFromAvatar(app.save.data.avatar), app.save.data.avatar.charm);
     },
     onTap: () => {
       fx.discover(830, 530);

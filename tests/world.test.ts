@@ -16,23 +16,40 @@ const ev = (over: Partial<AttemptEvidence>): AttemptEvidence => ({
   durationMs: 8000, tries: 1, hintsUsed: 0, at: Date.now(), ...over,
 });
 
-describe('save migration v1 → v2 (no data loss)', () => {
+describe('save migration v1 → v3 (no data loss)', () => {
   it('adds onboard[] and per-skill contexts[] to old saves', () => {
     const old = defaultSave();
     delete (old as Partial<SaveData>).onboard;
     old.version = 1;
     old.skills = { memory: { strength: 0.8, plays: 2, successes: 2, lastPlayedAt: 1, needsHelp: false } as never };
     const m = migrateSave(old);
-    expect(m.version).toBe(2);
+    expect(m.version).toBe(3);
     expect(m.onboard).toEqual([]);
     expect(m.skills['memory'].contexts).toEqual([]);
     expect(m.skills['memory'].strength).toBe(0.8); // untouched
     expect(m.world.coins).toBe(20);
   });
-  it('fresh saves already carry v2 fields', () => {
+  it('fresh saves already carry v3 fields', () => {
     const d = defaultSave();
-    expect(d.version).toBe(2);
+    expect(d.version).toBe(3);
     expect(d.onboard).toEqual([]);
+  });
+  it('v2 saves gain a default avatar; corrupt avatar values are sanitized', () => {
+    const old = defaultSave();
+    delete (old as Partial<SaveData>).avatar;
+    old.version = 2;
+    const m = migrateSave(old);
+    expect(m.version).toBe(3);
+    expect(m.avatar).toEqual({ tint: 'violet', charm: 'none', claimed: false });
+    const bad = defaultSave();
+    (bad as { avatar: unknown }).avatar = { tint: 'rainbow', charm: 'hat', claimed: 'yes' };
+    bad.version = 2;
+    const m2 = migrateSave(bad);
+    expect(m2.avatar).toEqual({ tint: 'violet', charm: 'none', claimed: false });
+    const kept = defaultSave();
+    kept.avatar = { tint: 'teal', charm: 'star', claimed: true };
+    kept.version = 2;
+    expect(migrateSave(kept).avatar).toEqual({ tint: 'teal', charm: 'star', claimed: true });
   });
 });
 
@@ -178,5 +195,41 @@ describe('first-steps guide (pure onboarding logic)', () => {
     d.onboard.push('done');
     expect(guideStep(d)).toBeNull();
     expect(vi.fn()).toBeDefined();
+  });
+});
+
+describe('mystery crate mission (pure state, museum-derived)', () => {
+  it('walks find → grow → done with no save-schema change', async () => {
+    const { mysteryPhase, plantSeed, applyBloom, BLOOM_KIND, SEED_KIND } = await import('../src/world/mystery');
+    const d = defaultSave();
+    expect(mysteryPhase(d.museum)).toBe('find');
+    expect(plantSeed(d)).toBe(true);
+    expect(d.museum.some((m) => m.kind === SEED_KIND)).toBe(true);
+    expect(plantSeed(d)).toBe(false); // idempotent
+    expect(mysteryPhase(d.museum)).toBe('grow');
+    const plants = d.world.garden.plants;
+    expect(applyBloom(d, 'sun')).toBe(true);
+    expect(d.world.garden.plants).toBe(plants + 1);
+    expect(d.museum.some((m) => m.kind === BLOOM_KIND)).toBe(true);
+    expect(applyBloom(d, 'leaf')).toBe(false); // one bloom only
+    expect(mysteryPhase(d.museum)).toBe('done');
+  });
+  it('every gift maps to real bloom art', async () => {
+    const { BLOOM_ART } = await import('../src/world/mystery');
+    for (const g of ['sun', 'leaf', 'star'] as const) {
+      expect(BLOOM_ART[g].emoji.length).toBeGreaterThan(0);
+      expect(BLOOM_ART[g].title.length).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe('avatar looks (identity without new art pipeline)', () => {
+  it('every tint resolves a full palette, unknown falls back to violet', async () => {
+    const { NOVA_LOOKS, lookFromAvatar } = await import('../src/engine/art');
+    for (const t of ['violet', 'teal', 'coral', 'sunny'] as const) {
+      const look = lookFromAvatar({ tint: t, charm: 'none', claimed: true });
+      expect(look.deep && look.mid && look.light && look.inner && look.glow).toBeTruthy();
+    }
+    expect(lookFromAvatar({ tint: 'rainbow' as never, charm: 'none', claimed: false })).toBe(NOVA_LOOKS.violet);
   });
 });

@@ -6,7 +6,7 @@
 import type { App } from '../core/app';
 import { BUILDINGS } from '../core/content';
 import { bus } from '../core/events';
-import { drawNova, drawPlotHouse, drawWalker, type NovaMood } from '../engine/art';
+import { drawNova, drawPlotHouse, drawWalker, lookFromAvatar, type NovaMood } from '../engine/art';
 import { Feedback, breathe } from '../engine/feedback';
 import { WorldScene, type SceneObj } from '../engine/scene';
 import { guideNotifyVisit } from '../world/guide';
@@ -242,7 +242,8 @@ export function city(app: App, root: HTMLElement): void {
     id: 'nova', x: 90, y: 250, r: 44, depth: 900,
     draw: (ctx, t) => {
       const mood = t > novaMood.until ? 'idle' : novaMood.mood;
-      drawNova(ctx, 90, 250, 28, { mood }, t, rm);
+      drawNova(ctx, 90, 250, 28, { mood }, t, rm,
+        lookFromAvatar(app.save.data.avatar), app.save.data.avatar.charm);
     },
     onTap: () => {
       fx.discover(90, 220);
@@ -358,7 +359,8 @@ export function museum(app: App, root: HTMLElement): void {
 
   scene.addObject({
     id: 'nova', x: 880, y: 500, r: 44, depth: 900,
-    draw: (ctx, t) => drawNova(ctx, 880, 500, 28, { mood: 'idle' }, t, rm),
+    draw: (ctx, t) => drawNova(ctx, 880, 500, 28, { mood: 'idle' }, t, rm,
+      lookFromAvatar(app.save.data.avatar), app.save.data.avatar.charm),
     onTap: () => {
       fx.discover(880, 470);
       say(items.length ? 'هذا متحفك! كل ما صنعته!' : 'متحفك ينتظر أول إبداع!');

@@ -230,6 +230,27 @@ canvas.world-canvas, canvas.scene-canvas {
   position: fixed; bottom: 18px; inset-inline-end: 18px; z-index: 70;
 }
 
+/* ---------- hatch slice: night beach, portrait-first ---------- */
+canvas.hatch-canvas {
+  height: min(72dvh, 640px); min-height: 440px;
+}
+.hatch-marks {
+  display: flex; gap: 18px; justify-content: center; z-index: 6;
+  animation: screenIn 0.4s ease;
+}
+.hatch-mark {
+  width: 84px; height: 84px; border-radius: 50%; font-size: 40px; cursor: pointer;
+  background: rgba(255, 201, 77, 0.14); border: 3px solid rgba(255, 201, 77, 0.6);
+  color: var(--cream); font-family: inherit;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform 0.15s ease;
+}
+.hatch-mark:active { transform: scale(0.88); }
+.hatch-farewell {
+  display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; z-index: 6;
+  animation: screenIn 0.4s ease;
+}
+
 /* ---------- misc ---------- */
 .kv { display: flex; justify-content: space-between; gap: 10px; font-size: 18px; padding: 8px 0; border-bottom: 1px dashed #ddd; }
 .progress { height: 18px; border-radius: 999px; background: rgba(255,255,255,0.15); overflow: hidden; width: 100%; }
@@ -251,3 +272,29 @@ body.reduce-motion * { animation-duration: 0.01ms !important; transition-duratio
   .choice { min-width: 100px; min-height: 104px; font-size: 44px; }
   .big-btn { width: 100%; }
 }
+
+/* ---------- my Nova picker (she is the interface) ---------- */
+.avatar-overlay {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(10, 12, 40, 0.55);
+  display: flex; align-items: center; justify-content: center; padding: 16px;
+  animation: screenIn 0.25s ease;
+}
+.avatar-card {
+  background: linear-gradient(160deg, #2a2f6b, #1b2350);
+  border: 2px solid rgba(255,255,255,0.2); border-radius: 28px;
+  padding: 18px; width: min(420px, 100%);
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  box-shadow: var(--shadow);
+}
+.avatar-preview { width: 150px; height: 150px; }
+.avatar-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.avatar-swatch {
+  width: 64px; height: 64px; border-radius: 50%; border: 3px solid transparent;
+  cursor: pointer; font-family: inherit; color: var(--cream); font-size: 30px;
+  background-color: rgba(255,255,255,0.1);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform 0.15s ease, border-color 0.2s;
+}
+.avatar-swatch:active { transform: scale(0.9); }
+.avatar-swatch.picked { border-color: var(--sun); transform: scale(1.1); }

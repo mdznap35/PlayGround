@@ -101,6 +101,28 @@ export interface Settings {
   aiAssist: boolean;
 }
 
+/** Nova identity — chosen by the child, worn everywhere she appears. */
+export type NovaTint = 'violet' | 'teal' | 'coral' | 'sunny';
+export type NovaCharm = 'none' | 'leaf' | 'star' | 'shell';
+export interface Avatar {
+  tint: NovaTint;
+  charm: NovaCharm;
+  /** true once the child has actively chosen (vs default) */
+  claimed: boolean;
+}
+
+/** Hatch memory — how the child kept the pod (ownership via history). */
+export interface HatchSave {
+  hatchedAt: number;
+  tint: string;
+  pattern: string;
+  chirpBase: number;
+  podCount: number;
+  temperament: string;
+  mark: string;
+  memory: { warmth: number; gentleness: number; song: number; overEvents: number };
+}
+
 export interface SaveData {
   version: number;
   childName: string;
@@ -115,6 +137,8 @@ export interface SaveData {
   passport: string[]; // destination ids visited
   spotlight: Record<string, number>; // theme affinity counters
   onboard: string[]; // guided first-steps completed (see src/world/guide.ts)
+  avatar: Avatar; // my Nova — tint + charm, rendered in every scene
+  hatch?: HatchSave; // creative-reset slice: pod → Nova memory (optional, no migration)
 }
 
 export interface ActivityContext {

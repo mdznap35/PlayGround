@@ -721,7 +721,51 @@ export function drawPlotHouse(ctx: CanvasRenderingContext2D, x: number, y: numbe
 
 /* ------------------------------- NOVA ------------------------------- */
 
+import type { Avatar, NovaCharm, NovaTint } from '../core/types';
+
 export type NovaMood = 'idle' | 'walk' | 'look' | 'point' | 'react' | 'celebrate' | 'think' | 'discover' | 'sleep';
+
+export interface NovaLook {
+  deep: string; mid: string; light: string; inner: string; glow: string;
+}
+
+/** One coherent palette per tint — same silhouette, my colors. */
+export const NOVA_LOOKS: Record<NovaTint, NovaLook> = {
+  violet: { deep: '#5a4bd6', mid: '#7c6cf0', light: '#9a8fff', inner: '#c9c2ff', glow: 'rgba(178,168,255,0.7)' },
+  teal: { deep: '#1f8a70', mid: '#3fbf9f', light: '#8fe3c8', inner: '#d2f5e8', glow: 'rgba(120,225,190,0.7)' },
+  coral: { deep: '#d6535f', mid: '#f27e8a', light: '#ffb3ba', inner: '#ffe0e3', glow: 'rgba(245,150,160,0.7)' },
+  sunny: { deep: '#c78d1b', mid: '#f2b63d', light: '#ffdd85', inner: '#fff3cf', glow: 'rgba(255,205,100,0.7)' },
+};
+
+export function lookFromAvatar(a: Avatar): NovaLook {
+  return NOVA_LOOKS[a?.tint] ?? NOVA_LOOKS.violet;
+}
+
+/** Little keepsake Nova wears — drawn in her own transform space. */
+export function drawCharm(ctx: CanvasRenderingContext2D, s: number, charm: NovaCharm): void {
+  if (charm === 'none') return;
+  if (charm === 'leaf') {
+    ctx.fillStyle = '#5fd68a';
+    ctx.beginPath(); ctx.ellipse(-s * 0.52, -s * 0.95, s * 0.13, s * 0.07, -0.6, 0, Math.PI * 2); ctx.fill();
+    outline(ctx, 2);
+  } else if (charm === 'star') {
+    ctx.fillStyle = '#ffd76e';
+    ctx.beginPath();
+    const cx = s * 0.5, cy = -s * 0.98, r = s * 0.11;
+    for (let i = 0; i < 10; i++) {
+      const rr2 = i % 2 ? r * 0.45 : r;
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      ctx.lineTo(cx + Math.cos(a) * rr2, cy + Math.sin(a) * rr2);
+    }
+    ctx.closePath(); ctx.fill(); outline(ctx, 2);
+  } else if (charm === 'shell') {
+    ctx.fillStyle = '#ffb3a7';
+    ctx.beginPath(); ctx.arc(s * 0.28, s * 0.42, s * 0.1, 0, Math.PI * 2); ctx.fill();
+    outline(ctx, 2);
+    ctx.strokeStyle = 'rgba(42,35,80,0.5)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(s * 0.2, s * 0.42); ctx.lineTo(s * 0.36, s * 0.42); ctx.stroke();
+  }
+}
 
 export interface NovaPose {
   mood: NovaMood;
@@ -730,17 +774,19 @@ export interface NovaPose {
   gazeY?: number;
 }
 
-/** Nova: a small violet wisp-creature. Consistent silhouette, big readable eyes. */
+/** Nova: a small wisp-creature. Consistent silhouette, big readable eyes.
+ * `look` tints her to the child's chosen identity; `charm` adds her keepsake. */
 export function drawNova(
   ctx: CanvasRenderingContext2D, x: number, y: number, s: number,
-  pose: NovaPose, t: number, rm: boolean,
+  pose: NovaPose, t: number, rm: boolean, look: NovaLook = NOVA_LOOKS.violet,
+  charm: NovaCharm = 'none',
 ): void {
   const bob = rm ? 0 : Math.sin(t / 320) * (pose.mood === 'walk' ? 4 : 2.2);
   const squash = pose.mood === 'celebrate' && !rm ? 1 + 0.08 * Math.sin(t / 120) : 1;
   y += bob;
   // glow
   const g = ctx.createRadialGradient(x, y, 4, x, y, s * 1.15);
-  g.addColorStop(0, 'rgba(178,168,255,0.7)');
+  g.addColorStop(0, look.glow);
   g.addColorStop(1, 'rgba(178,168,255,0)');
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.arc(x, y, s * 1.15, 0, Math.PI * 2); ctx.fill();
@@ -752,22 +798,22 @@ export function drawNova(
   ctx.scale(2 - squash > 1 ? 1 : 1, squash);
   if (pose.mood === 'react') ctx.rotate(-0.12);
   // ears
-  ctx.fillStyle = VIOLET_D;
+  ctx.fillStyle = look.deep;
   for (const ex of [-s * 0.42, s * 0.42]) {
     ctx.beginPath();
     ctx.ellipse(ex, -s * 0.78, s * 0.16, s * 0.34, ex < 0 ? -0.25 : 0.25, 0, Math.PI * 2);
     ctx.fill(); outline(ctx, 2.5);
-    ctx.fillStyle = '#c9c2ff';
+    ctx.fillStyle = look.inner;
     ctx.beginPath();
     ctx.ellipse(ex, -s * 0.76, s * 0.07, s * 0.18, ex < 0 ? -0.25 : 0.25, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = VIOLET_D;
+    ctx.fillStyle = look.deep;
   }
   // body
   const bg2 = ctx.createLinearGradient(-s * 0.6, 0, s * 0.6, 0);
-  bg2.addColorStop(0, VIOLET_D);
-  bg2.addColorStop(0.45, VIOLET);
-  bg2.addColorStop(1, '#9a8fff');
+  bg2.addColorStop(0, look.deep);
+  bg2.addColorStop(0.45, look.mid);
+  bg2.addColorStop(1, look.light);
   ctx.fillStyle = bg2;
   ctx.beginPath(); ctx.arc(0, 0, s * 0.62, 0, Math.PI * 2); ctx.fill(); outline(ctx, 3);
   // belly light
@@ -775,12 +821,12 @@ export function drawNova(
   ctx.beginPath(); ctx.ellipse(-s * 0.18, -s * 0.22, s * 0.2, s * 0.3, -0.4, 0, Math.PI * 2); ctx.fill();
   // feet (alternate when walking)
   const step = pose.mood === 'walk' && !rm ? Math.sin(t / 130) * s * 0.12 : 0;
-  ctx.fillStyle = VIOLET_D;
+  ctx.fillStyle = look.deep;
   ctx.beginPath(); ctx.ellipse(-s * 0.24, s * 0.6 + step, s * 0.16, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(s * 0.24, s * 0.6 - step, s * 0.16, s * 0.1, 0, 0, Math.PI * 2); ctx.fill();
   // arms
   const armUp = pose.mood === 'celebrate' || pose.mood === 'discover';
-  ctx.strokeStyle = VIOLET_D;
+  ctx.strokeStyle = look.deep;
   ctx.lineWidth = s * 0.11;
   ctx.lineCap = 'round';
   // left arm
@@ -851,12 +897,13 @@ export function drawNova(
   }
   if (pose.mood === 'sleep' && !rm) {
     ctx.font = `${s * 0.5}px serif`;
-    ctx.fillStyle = '#9a8fff';
+    ctx.fillStyle = look.light;
     const ph = (t / 1600) % 1;
     ctx.globalAlpha = 1 - ph;
     ctx.fillText('z', s * 0.6, -s * 0.7 - ph * 22);
     ctx.globalAlpha = 1;
   }
+  drawCharm(ctx, s, charm);
   ctx.restore();
 }
 

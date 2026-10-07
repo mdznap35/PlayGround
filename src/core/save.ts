@@ -1,9 +1,9 @@
 /* SaveSystem: versioned, autosaving, crash-safe (backup slot + migrations). */
 
-import type { SaveData } from './types';
+import type { SaveData, Avatar } from './types';
 import { bus } from './events';
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const KEY = 'nova.save.v1'; // key unchanged on purpose: v1 data migrates in place
 const BACKUP_KEY = 'nova.save.v1.backup';
 
@@ -22,16 +22,32 @@ export function defaultSave(): SaveData {
     passport: [],
     spotlight: {},
     onboard: [],
+    avatar: { tint: 'violet', charm: 'none', claimed: false },
   };
 }
 
-/** Migration chain: v1 → v2 adds onboard[] + per-skill contexts[]. Exported for tests. */
+/** Migration chain: v1 → v2 adds onboard[] + per-skill contexts[];
+ * v2 → v3 adds avatar (my Nova). Exported for tests. */
 export function migrateSave(data: SaveData): SaveData {
   if (typeof data.version !== 'number') data.version = 1;
   if (data.version < 2) {
     if (!Array.isArray(data.onboard)) data.onboard = [];
     for (const s of Object.values(data.skills)) {
       if (!Array.isArray((s as { contexts?: unknown }).contexts)) (s as { contexts: string[] }).contexts = [];
+    }
+  }
+  if (data.version < 3) {
+    const a = (data as Partial<SaveData>).avatar;
+    if (!a || typeof a !== 'object') {
+      (data as SaveData).avatar = { tint: 'violet', charm: 'none', claimed: false };
+    } else {
+      const tints = ['violet', 'teal', 'coral', 'sunny'];
+      const charms = ['none', 'leaf', 'star', 'shell'];
+      (data as SaveData).avatar = {
+        tint: (tints.includes(a.tint) ? a.tint : 'violet') as Avatar['tint'],
+        charm: (charms.includes(a.charm) ? a.charm : 'none') as Avatar['charm'],
+        claimed: a.claimed === true,
+      };
     }
   }
   data.version = SAVE_VERSION;

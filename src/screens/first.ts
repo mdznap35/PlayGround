@@ -4,7 +4,7 @@
    No paragraphs, no menus, no reading. */
 
 import type { App } from '../core/app';
-import { drawHouse, drawLab, drawNova, type NovaMood } from '../engine/art';
+import { drawHouse, drawLab, drawNova, lookFromAvatar, type NovaMood } from '../engine/art';
 import { WorldScene } from '../engine/scene';
 import { el } from '../ui/helpers';
 
@@ -35,7 +35,9 @@ export function firstLaunch(app: App, root: HTMLElement): void {
     app.save.update((d) => { d.childName = 'صديق نوفا'; });
     app.save.saveNow();
     app.analytics.track('session:start', {});
-    app.go('world');
+    // Creative Reset: the cinematic hands off to the hatch beach (first real
+    // experience), not to the menu hub.
+    app.go('hatch');
   };
   skip.onclick = () => { app.audio.unlock(); app.audio.sfx('tap'); finish(); };
   canvas.onpointerdown = () => { app.audio.unlock(); };
@@ -145,7 +147,8 @@ export function firstLaunch(app: App, root: HTMLElement): void {
       const appear = Math.min(1, (el2 - 2.2) / 0.8);
       ctx.globalAlpha = appear;
       const gaze = nova.mood === 'discover' || nova.mood === 'walk' ? { x: 620, y: 340 } : { x: 500, y: 620 };
-      drawNova(ctx, nova.x, nova.y, 30, { mood: nova.mood, gazeX: gaze.x, gazeY: gaze.y }, t, rm);
+      drawNova(ctx, nova.x, nova.y, 30, { mood: nova.mood, gazeX: gaze.x, gazeY: gaze.y }, t, rm,
+        lookFromAvatar(app.save.data.avatar), app.save.data.avatar.charm);
       ctx.globalAlpha = 1;
     },
   });

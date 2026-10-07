@@ -5,6 +5,7 @@ import { App, type ScreenName } from './core/app';
 import { ambienceFor } from './core/ambience';
 import { bus } from './core/events';
 import { SoundBank } from './core/sound';
+import { NOVA_LOOKS } from './engine/art';
 import { NovaGuide, toasts } from './ui/nova';
 import { firstLaunch } from './screens/first';
 import { world } from './screens/world';
@@ -21,6 +22,7 @@ import { stories } from './screens/stories';
 import { music } from './screens/music';
 import { values } from './screens/values';
 import { city, museum } from './screens/city';
+import { hatch } from './screens/hatch';
 import { projects } from './screens/projects';
 import { quests } from './screens/quests';
 import { parents, applySettings } from './screens/parents';
@@ -33,6 +35,11 @@ app.audio.bank = { tryPlay: (n) => bank.tryPlay(n) };
 toasts();
 const nova = new NovaGuide((text) => app.voice.speak(text, 'ar', true));
 void nova;
+// wear my Nova's colors in the guide bubble from the first frame
+{
+  const look = NOVA_LOOKS[app.save.data.avatar.tint];
+  nova.paintFace(look.mid, look.deep);
+}
 
 const root = document.getElementById('app')!;
 
@@ -55,6 +62,7 @@ const routes: Record<ScreenName, (param?: string) => void> = {
   parents: (p) => parents(app, root, p),
   projects: (p) => projects(app, root, p),
   quests: () => quests(app, root),
+  hatch: () => hatch(app, root),
 };
 
 app.go = (name: ScreenName, param?: string) => {
@@ -96,10 +104,19 @@ bus.on('toast', () => {
 
 applySettings(app);
 
-// First launch ever → cinematic. Otherwise straight into the world.
-if (!localStorage.getItem('nova.seen')) {
+// Deep-link affordance (testing + future share links): #<screen> jumps straight
+// in when it names a real route. Otherwise normal boot:
+// first launch → cinematic → hatch beach; unhatched keepers → hatch beach.
+const hash = (location.hash || '').replace('#', '');
+if (hash && hash in routes) {
+  app.analytics.track('session:start', {});
+  app.go(hash as ScreenName);
+} else if (!localStorage.getItem('nova.seen')) {
   localStorage.setItem('nova.seen', '1');
   firstLaunch(app, root);
+} else if (!app.save.data.hatch?.hatchedAt) {
+  app.analytics.track('session:start', {});
+  app.go('hatch');
 } else {
   app.analytics.track('session:start', {});
   app.go('world');

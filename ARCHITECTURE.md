@@ -84,7 +84,7 @@ tests/      vitest: content validation, adaptive, skills, projects, save
 - **Layer 2 — World Engine (new, `src/world/`)**: one living 2.5D island —
   camera-fixed vista, depth-sorted places, Nova avatar, tap-to-travel,
   ambient life, artifact placement. Pure mapping (`objects.ts`) is unit-tested;
-  renderer (`render.ts`) is a self-cleaning canvas loop.
+  renderer (WorldScene in `engine/scene.ts`) is a self-cleaning canvas loop.
 - **Layer 3 — Activity Engine (kept 2D)**: all sims/puzzles/sequencers stay
   Canvas/SVG/DOM. They are *entered from the world* and *report back to it*.
 - **Layer 4 — Project Engine (extended, not rewritten)**: `finish()` additionally

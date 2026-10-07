@@ -6,7 +6,7 @@
 import type { App } from '../core/app';
 import { decide } from '../core/adaptive';
 import { bus } from '../core/events';
-import { drawNova } from '../engine/art';
+import { drawNova, lookFromAvatar } from '../engine/art';
 import { Feedback, breathe } from '../engine/feedback';
 import { WorldScene } from '../engine/scene';
 import { bigButton, choice, choiceRow, el, title } from '../ui/helpers';
@@ -152,7 +152,8 @@ function mindRoom(app: App, root: HTMLElement): void {
 
   scene.addObject({
     id: 'nova', x: 120, y: 500, r: 44, depth: 900,
-    draw: (ctx, t) => drawNova(ctx, 120, 500, 30, { mood: 'idle' }, t, rm),
+    draw: (ctx, t) => drawNova(ctx, 120, 500, 30, { mood: 'idle' }, t, rm,
+      lookFromAvatar(app.save.data.avatar), app.save.data.avatar.charm),
     onTap: () => {
       fx.discover(120, 470);
       say('غرفة التفكير! المس أي لعبة!');
