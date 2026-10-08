@@ -23,6 +23,9 @@ import { music } from './screens/music';
 import { values } from './screens/values';
 import { city, museum } from './screens/city';
 import { hatch } from './screens/hatch';
+import { grove } from './screens/grove';
+import { lamplight } from './screens/lamplight';
+import { starmail } from './screens/starmail';
 import { projects } from './screens/projects';
 import { quests } from './screens/quests';
 import { parents, applySettings } from './screens/parents';
@@ -63,6 +66,9 @@ const routes: Record<ScreenName, (param?: string) => void> = {
   projects: (p) => projects(app, root, p),
   quests: () => quests(app, root),
   hatch: () => hatch(app, root),
+  grove: () => grove(app, root),
+  lamplight: () => lamplight(app, root),
+  starmail: () => starmail(app, root),
 };
 
 app.go = (name: ScreenName, param?: string) => {

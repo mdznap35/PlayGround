@@ -12,7 +12,8 @@ import { bus } from './events';
 export type ScreenName =
   | 'world' | 'home' | 'lab' | 'body' | 'mind' | 'make' | 'robot'
   | 'explorer' | 'space' | 'impossible' | 'stories' | 'music'
-  | 'values' | 'city' | 'museum' | 'parents' | 'projects' | 'quests' | 'hatch';
+  | 'values' | 'city' | 'museum' | 'parents' | 'projects' | 'quests' | 'hatch'
+  | 'grove' | 'lamplight' | 'starmail';
 
 export class App {
   save = new SaveSystem();

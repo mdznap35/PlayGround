@@ -98,6 +98,20 @@ export function worldObjects(d: SaveData): PlacedObject[] {
     objs.push({ id: `flag-${i}`, kind: 'deco', zone: null, emoji: '🚩', x: 6 + i * 3, y: 49, size: 18, label: '' });
   });
 
+  // expedition rewards (persistence contract: earned ⇒ visible on the island)
+  if ((d.grove?.completedAt ?? 0) > 0) {
+    objs.push({ id: 'grove-bloom', kind: 'artifact', zone: null, emoji: '🌸', x: 6, y: 57, size: 30, label: 'غابتي!' });
+    if (d.grove?.firefly) {
+      objs.push({ id: 'grove-firefly', kind: 'ambient', zone: null, emoji: '✨', x: 10, y: 55, size: 18, label: '' });
+    }
+  }
+  if ((d.lamplight?.completedAt ?? 0) > 0) {
+    objs.push({ id: 'lamp-tower', kind: 'artifact', zone: null, emoji: '🏮', x: 62, y: 12, size: 30, label: 'منارتي!' });
+  }
+  if ((d.starmail?.completedAt ?? 0) > 0) {
+    objs.push({ id: 'star-monument', kind: 'artifact', zone: null, emoji: '⭐', x: 80, y: 8, size: 26, label: 'نجمتي!' });
+  }
+
   return objs;
 }
 

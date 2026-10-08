@@ -503,6 +503,148 @@ export function world(app: App, root: HTMLElement): void {
   };
   scene.addObject(novaObj);
 
+  // ================= THREE EXPEDITIONS (diegetic portals, never a menu) =================
+  // Each portal is a place you touch; after completion it KEEPS the reward
+  // visible and stays replayable. Nova walks you there; the camera flies in.
+  const goExp = (x: number, y: number, screen: ScreenName) => {
+    if (traveling.busy) return;
+    traveling.busy = true;
+    nova.target = { x, y: y + 52 };
+    nova.onArrive = () => {
+      nova.mood = 'celebrate';
+      nova.moodUntil = performance.now() + 650;
+      fx.discover(x, y);
+      scene.cam.focus(x - 100 / 1.9, y - 80 / 1.9, 1.9, 750, () => {
+        app.audio.sfx('step');
+        app.go(screen);
+      });
+    };
+  };
+
+  // ---- grove portal: mushroom ring by the west gate (blooms after completion)
+  const groveDone = (d.grove?.completedAt ?? 0) > 0;
+  const grovePortal: SceneObj = {
+    id: 'portal-grove', x: 62, y: 588, r: 40, depth: 589,
+    draw: (ctx, t) => {
+      ctx.fillStyle = 'rgba(63,138,79,0.4)';
+      ctx.beginPath(); ctx.ellipse(62, 592, 44, 14, 0, 0, Math.PI * 2); ctx.fill();
+      // mushrooms
+      const shrooms: [number, string][] = groveDone
+        ? [[-26, '#ff8fb0'], [0, '#ffd76e'], [26, '#b3a8ff']]
+        : [[-20, '#b9c4d6'], [18, '#a8b4c8']];
+      for (const [dx, cap] of shrooms) {
+        ctx.fillStyle = '#f3ead8';
+        ctx.fillRect(62 + dx - 4, 576, 8, 14);
+        ctx.fillStyle = cap;
+        ctx.beginPath(); ctx.arc(62 + dx, 576, 11, Math.PI, 0); ctx.fill();
+        ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(62 + dx - 4, 572, 2, 0, Math.PI * 2); ctx.fill();
+      }
+      if (groveDone && !rm) {
+        // firefly friend kept its promise — it lives here now
+        const fx2 = 62 + Math.sin(t / 700) * 30;
+        const fy2 = 560 + Math.cos(t / 900) * 12;
+        ctx.fillStyle = '#ffe98a';
+        ctx.beginPath(); ctx.arc(fx2, fy2, 3.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,230,150,0.35)';
+        ctx.beginPath(); ctx.arc(fx2, fy2, 9, 0, Math.PI * 2); ctx.fill();
+      } else if (!groveDone) {
+        // shimmer of thirst: something here needs water
+        ctx.fillStyle = `rgba(120,200,245,${rm ? 0.4 : 0.25 + 0.2 * Math.sin(t / 600)})`;
+        ctx.beginPath(); ctx.ellipse(62, 592, 30, 7, 0, 0, Math.PI * 2); ctx.fill();
+        spotlight(ctx, 62, 570, 34, t, rm);
+      }
+      labelPill(ctx, 62, 606, groveDone ? 'غابتي!' : 'الغابة!');
+    },
+    onTap: () => { fx.tap(); goExp(62, 588, 'grove'); },
+  };
+  scene.addObject(grovePortal);
+
+  // ---- lighthouse portal: dark tower on the city hill (beams after completion)
+  const lampDone = (d.lamplight?.completedAt ?? 0) > 0;
+  const lampPortal: SceneObj = {
+    id: 'portal-lamp', x: 628, y: 138, r: 38, depth: 139,
+    draw: (ctx, t) => {
+      ctx.fillStyle = lampDone ? '#8fa3c8' : '#3a4666';
+      ctx.fillRect(628 - 13, 108, 26, 52);
+      ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 2.5;
+      ctx.strokeRect(628 - 13, 108, 26, 52);
+      // lamp room
+      ctx.fillStyle = lampDone ? '#ffd76e' : '#232a44';
+      ctx.beginPath(); ctx.arc(628, 100, 11, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 2.5; ctx.stroke();
+      if (lampDone) {
+        // rotating beacon — the city stayed awake
+        const a = rm ? 0.6 : t / 1200;
+        const g = ctx.createLinearGradient(628, 100, 628 + Math.cos(a) * 90, 100 + Math.sin(a) * 30);
+        g.addColorStop(0, 'rgba(255,220,150,0.55)');
+        g.addColorStop(1, 'rgba(255,220,150,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(628, 100);
+        ctx.lineTo(628 + Math.cos(a - 0.14) * 90, 100 + Math.sin(a - 0.14) * 30);
+        ctx.lineTo(628 + Math.cos(a + 0.14) * 90, 100 + Math.sin(a + 0.14) * 30);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(255,215,130,0.5)';
+        ctx.beginPath(); ctx.arc(628, 100, 20, 0, Math.PI * 2); ctx.fill();
+      } else {
+        ctx.font = '15px serif'; ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(180,200,240,0.8)';
+        ctx.fillText('z', 644 + (rm ? 0 : Math.sin(t / 800) * 2), 92);
+        spotlight(ctx, 628, 118, 32, t, rm);
+      }
+      labelPill(ctx, 628, 152, lampDone ? 'منارتي!' : 'المنارة!');
+    },
+    onTap: () => { fx.tap(); goExp(628, 138, 'lamplight'); },
+  };
+  scene.addObject(lampPortal);
+
+  // ---- star-meadow portal: fallen spark by the launch pad (monument after)
+  const starDone = (d.starmail?.completedAt ?? 0) > 0;
+  const starPortal: SceneObj = {
+    id: 'portal-star', x: 792, y: 108, r: 38, depth: 109,
+    draw: (ctx, t) => {
+      // crater
+      ctx.fillStyle = 'rgba(20,26,60,0.35)';
+      ctx.beginPath(); ctx.ellipse(792, 116, 34, 10, 0, 0, Math.PI * 2); ctx.fill();
+      if (starDone) {
+        // the monument: crystal star on stone, gently breathing
+        const p = rm ? 1 : 1 + 0.06 * Math.sin(t / 600);
+        ctx.save();
+        ctx.translate(792, 92); ctx.scale(p, p); ctx.translate(-792, -92);
+        ctx.fillStyle = '#8d99ae';
+        ctx.fillRect(784, 100, 16, 14);
+        ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 2; ctx.strokeRect(784, 100, 16, 14);
+        ctx.fillStyle = '#fff8dc';
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const rr2 = i % 2 ? 6 : 14;
+          const a = -Math.PI / 2 + (i * Math.PI) / 5;
+          ctx.lineTo(792 + Math.cos(a) * rr2, 84 + Math.sin(a) * rr2);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = '#2a2350'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = 'rgba(255,240,200,0.4)';
+        ctx.beginPath(); ctx.arc(792, 84, 22, 0, Math.PI * 2); ctx.fill();
+      } else {
+        // a fallen spark, pulsing for help — tap to go hear it
+        const p = rm ? 0.7 : 0.4 + 0.35 * Math.sin(t / 450);
+        ctx.fillStyle = `rgba(255,220,150,${p})`;
+        ctx.beginPath(); ctx.arc(792, 96, 10, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,220,150,${p * 0.4})`;
+        ctx.beginPath(); ctx.arc(792, 96, 20, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(792, 96, 4, 0, Math.PI * 2); ctx.fill();
+        spotlight(ctx, 792, 96, 28, t, rm);
+      }
+      labelPill(ctx, 792, 122, starDone ? 'نجمتي!' : 'النجمة!');
+    },
+    onTap: () => { fx.tap(); goExp(792, 108, 'starmail'); },
+  };
+  scene.addObject(starPortal);
+
   // ---- cinematic entry: start close on home, pull back to reveal the world
   scene.start();
   if (!rm) {

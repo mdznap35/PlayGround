@@ -139,6 +139,25 @@ export interface SaveData {
   onboard: string[]; // guided first-steps completed (see src/world/guide.ts)
   avatar: Avatar; // my Nova — tint + charm, rendered in every scene
   hatch?: HatchSave; // creative-reset slice: pod → Nova memory (optional, no migration)
+  /** in-progress pod snapshot (jury: kids get interrupted). Cleared on hatch. */
+  hatchProgress?: {
+    temperament: string; warmth: number; shelter: number; song: number;
+    memory: { warmth: number; gentleness: number; song: number; overEvents: number };
+    at: number;
+  };
+  /** grove expedition: the forest that forgot how to grow (optional, no migration) */
+  grove?: { blooms: number; bestChain: number; completedAt: number; firefly: boolean };
+  /** grove in-progress snapshot (cleared on chain completion) */
+  groveProgress?: {
+    seed: number; diff: 0 | 1 | 2;
+    stages: number[]; growth: number[];
+    damStones: Record<string, number>;
+    at: number;
+  };
+  /** lamplight expedition: city of light (optional, no migration) */
+  lamplight?: { lit: number; completedAt: number; towers: number };
+  /** starmail expedition: message from the stars (optional, no migration) */
+  starmail?: { rounds: number; completedAt: number; motif: number[]; starTint: string };
 }
 
 export interface ActivityContext {

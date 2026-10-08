@@ -101,3 +101,50 @@ describe('hatchling pod state machine', () => {
     expect(p.warmth).toBe(w);
   });
 });
+
+describe('mid-play snapshot (interruptions are the norm)', () => {
+  it('round-trips a live pod through a plain snapshot', async () => {
+    const { snapshotPod, restorePod } = await import('../src/world/hatchling');
+    const p = createPod('hungry', 1000);
+    for (let i = 0; i < 120; i++) rubPod(p, 0.5, 1000 + i);
+    holdPod(p, 3, 2000);
+    singPod(p, 0.9, 3000);
+    const snap = snapshotPod(p, 4000);
+    expect(snap.temperament).toBe('hungry');
+    const back = restorePod(JSON.parse(JSON.stringify(snap)), 5000);
+    expect(back).not.toBeNull();
+    expect(back!.warmth).toBeCloseTo(p.warmth, 5);
+    expect(back!.shelter).toBeCloseTo(p.shelter, 5);
+    expect(back!.memory.song).toBe(p.memory.song);
+    expect(back!.phase).toBe(p.phase);
+    expect(back!.over).toBe('none');
+  });
+  it('rejects stale, corrupt, and over-range snapshots', async () => {
+    const { snapshotPod, restorePod, SNAPSHOT_TTL_MS } = await import('../src/world/hatchling');
+    const p = createPod('sleepy', Date.now());
+    const snap = snapshotPod(p, Date.now());
+    expect(restorePod(null)).toBeNull();
+    expect(restorePod(undefined)).toBeNull();
+    expect(restorePod({ ...snap, at: -SNAPSHOT_TTL_MS - 1 }, 0)).toBeNull();
+    expect(restorePod({ ...snap, temperament: 'grumpy' } as never)).toBeNull();
+    const wild = restorePod({ ...snap, warmth: 9999, shelter: -50 });
+    expect(wild!.warmth).toBe(100);
+    expect(wild!.shelter).toBe(0);
+  });
+});
+
+describe('stall rescue decision (pure, time-based)', () => {
+  it('fires after ~40s of shelter-less rubbing, not before', async () => {
+    const { shouldShowCupHint, STALL_RUB_MS } = await import('../src/world/hatchling');
+    const base = { shelter: 5, gentleness: 0 };
+    expect(shouldShowCupHint({ ...base, rubActiveMs: STALL_RUB_MS - 1 })).toBe(false);
+    expect(shouldShowCupHint({ ...base, rubActiveMs: STALL_RUB_MS })).toBe(true);
+    expect(shouldShowCupHint({ ...base, rubActiveMs: STALL_RUB_MS + 60000 })).toBe(true);
+  });
+  it('stays silent once shelter is found or holding discovered', async () => {
+    const { shouldShowCupHint, STALL_RUB_MS } = await import('../src/world/hatchling');
+    expect(shouldShowCupHint({ rubActiveMs: STALL_RUB_MS + 1, shelter: 15, gentleness: 0 })).toBe(false);
+    expect(shouldShowCupHint({ rubActiveMs: STALL_RUB_MS + 1, shelter: 0, gentleness: 2 })).toBe(false);
+    expect(shouldShowCupHint(null as never)).toBe(false);
+  });
+});

@@ -78,6 +78,9 @@ export const ACTIVITIES: ActivityMeta[] = [
   { id: 'garden', zone: 'explorer', title: 'حديقتي', emoji: '🌱', voice: 'ازرع واسقِ وراقب! شو بيحتاج النبات ليعيش؟', skills: ['nature', 'animals', 'prediction'] },
   { id: 'emotions', zone: 'home', title: 'مشاعري', emoji: '😊', voice: 'شوف الوجه… شو حاسس؟ امتى حسيت هيك انت؟', skills: ['emotions', 'communication', 'description'] },
   { id: 'odd-one', zone: 'mind', title: 'الشي المختلف', emoji: '🔍', voice: 'شي واحد مختلف عن البقية! لاقيه بسرعة!', skills: ['observation', 'classification', 'flexibility'] },
+  { id: 'grove-keep', zone: 'explorer', title: 'غابة نوفا', emoji: '🌳', voice: 'الغابة نايمة والمي محبوسة! حرّك الحجارة وخلي المي توصل!', skills: ['prediction', 'observation', 'sequencing', 'nature', 'problemSolving', 'spatial'] },
+  { id: 'lamp-plan', zone: 'city', title: 'مدينة الضوء', emoji: '🏮', voice: 'المدينة نايمة! حرّك المرايا ووصّل الضو لكل الشوارع!', skills: ['spatial', 'logic', 'planning', 'sequencing', 'prediction', 'debugging'] },
+  { id: 'star-echo', zone: 'space', title: 'رسالة النجوم', emoji: '🌠', voice: 'السماء عم تحكي! اسمع منيح والمس النجوم متل ما سمعتها!', skills: ['memory', 'patterns', 'listening', 'sequencing', 'sound', 'emotions', 'prediction'] },
 ];
 
 export const QUESTS: QuestDef[] = [

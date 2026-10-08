@@ -54,6 +54,8 @@ export class WorldScene {
   private drag: { obj: SceneObj; dx: number; dy: number; moved: boolean } | null = null;
   private panStart: { x: number; y: number; cx: number; cy: number } | null = null;
   onPan: (() => void) | null = null;
+  /** Fixed-vista scenes (hatch beach) opt out: care strokes must never move the camera. */
+  panEnabled = true;
 
   constructor(canvas: HTMLCanvasElement, opts: SceneOpts) {
     this.canvas = canvas;
@@ -131,7 +133,7 @@ export class WorldScene {
       this.drag.moved = true;
       return;
     }
-    if (this.panStart && e.buttons) {
+    if (this.panStart && e.buttons && this.panEnabled) {
       const dx = e.clientX - this.panStart.x;
       const dy = e.clientY - this.panStart.y;
       if (Math.hypot(dx, dy) > 12) {
