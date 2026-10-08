@@ -179,3 +179,77 @@ export function nextTemperament(current: PodTemperament): PodTemperament {
   const order: PodTemperament[] = ['sleepy', 'hungry', 'singy'];
   return order[(order.indexOf(current) + 1) % order.length];
 }
+
+/* ---- mid-play snapshot (jury: interruptions are the norm for kids) ----
+   A plain-data snapshot of the live pod, written to the save on phase
+   transitions and restored on revisit. No timers, no DOM, fully tested. */
+
+/* ---- stall rescue (rub-only players soft-lock) ----
+   Pure decision: has the child been actively rubbing long enough with no
+   shelter discovered? Time-based (not warmth-based) so slow gentle rubbers —
+   who never reach warmth 30 — are rescued too. Caller enforces max shows +
+   cooldowns + born/phase guards. */
+
+export interface StallState {
+  /** ms of active rubbing accumulated */
+  rubActiveMs: number;
+  /** current shelter meter 0..100 */
+  shelter: number;
+  /** seconds ever held (discovery proxy) */
+  gentleness: number;
+}
+
+export const STALL_RUB_MS = 40000; // ~40s of rubbing with no hold discovered
+
+export function shouldShowCupHint(s: StallState): boolean {
+  if (!s || typeof s !== 'object') return false;
+  const rub = typeof s.rubActiveMs === 'number' ? s.rubActiveMs : 0;
+  const shelter = typeof s.shelter === 'number' ? s.shelter : 100;
+  const gentle = typeof s.gentleness === 'number' ? s.gentleness : 1;
+  return rub >= STALL_RUB_MS && shelter < 15 && gentle < 1;
+}
+
+export interface PodSnapshot {
+  temperament: PodTemperament;
+  warmth: number;
+  shelter: number;
+  song: number;
+  memory: HatchMemory;
+  at: number;
+}
+
+export const SNAPSHOT_TTL_MS = 7 * 24 * 3600 * 1000; // a week; older = start fresh
+
+export function snapshotPod(p: PodState, now = Date.now()): PodSnapshot {
+  return {
+    temperament: p.temperament,
+    warmth: p.warmth,
+    shelter: p.shelter,
+    song: p.song,
+    memory: { ...p.memory },
+    at: now,
+  };
+}
+
+/** Rebuild a live pod from a snapshot. Returns null when stale/invalid. */
+export function restorePod(snap: PodSnapshot | null | undefined, now = Date.now()): PodState | null {
+  if (!snap || typeof snap !== 'object') return null;
+  if (!['sleepy', 'hungry', 'singy'].includes(snap.temperament)) return null;
+  if (typeof snap.at !== 'number' || now - snap.at > SNAPSHOT_TTL_MS) return null;
+  const p = createPod(snap.temperament, now);
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  p.warmth = Math.max(0, Math.min(100, num(snap.warmth)));
+  p.shelter = Math.max(0, Math.min(100, num(snap.shelter)));
+  p.song = Math.max(0, Math.min(100, num(snap.song)));
+  const m = snap.memory ?? { warmth: 0, gentleness: 0, song: 0, overEvents: 0 };
+  p.memory = {
+    warmth: Math.max(0, num(m.warmth)),
+    gentleness: Math.max(0, num(m.gentleness)),
+    song: Math.max(0, Math.floor(num(m.song))),
+    overEvents: Math.max(0, Math.floor(num(m.overEvents))),
+  };
+  p.over = 'none';
+  p.overUntil = 0;
+  updatePhase(p, now);
+  return p;
+}

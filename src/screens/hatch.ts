@@ -11,8 +11,8 @@ import { WorldScene } from '../engine/scene';
 import { el } from '../ui/helpers';
 import { mountScreen } from './shell';
 import {
-  canBloom, coolPod, createPod, finishHatch, holdPod, nextTemperament,
-  rubPod, singPod, startBloom,
+  canBloom, coolPod, createPod, finishHatch, holdPod,
+  nextTemperament, restorePod, rubPod, shouldShowCupHint, singPod, snapshotPod, startBloom,
   type NovaIdentity, type PodState, type PodTemperament,
 } from '../world/hatchling';
 
@@ -103,12 +103,22 @@ export function hatch(app: App, root: HTMLElement): void {
   s.append(canvas);
 
   const scene = new WorldScene(canvas, { worldW: W, worldH: H, reduceMotion: rm, background: '#0e1440' });
+  scene.panEnabled = false; // fixed vista: rub/hold strokes must never drift the camera
   const fx = new Feedback(scene.particles, app.audio);
   const hum = new Hum(app);
 
   // ---- state
   const returning = !!d.hatch?.hatchedAt;
   let pod: PodState = createPod(returning ? nextTemperament((d.hatch?.temperament ?? 'sleepy') as PodTemperament) : 'sleepy');
+  let resumed = false;
+  // resume an interrupted keeping session (snapshot written on phase changes)
+  if (!returning && d.hatchProgress) {
+    const back = restorePod(d.hatchProgress as never);
+    if (back && (back.warmth >= 22 || back.shelter >= 25 || back.song >= 10)) {
+      pod = back;
+      resumed = true;
+    }
+  }
   let dawn = returning ? 1 : 0; // returning keepers come back to morning
   let nova: { born: boolean; id: NovaIdentity; x: number; y: number; tx: number; ty: number; hopT: number; moodUntil: number } = {
     born: returning,
@@ -126,11 +136,27 @@ export function hatch(app: App, root: HTMLElement): void {
   let bloomT0 = 0;
   let readyEchoes = 0;
   let holdBloomStart = 0;
+  // stall rescue (jury: rub-only players soft-lock): time-based so even
+  // slow gentle rubbers (who never reach warmth 30) get rescued.
+  let cupHints = 0;
+  let cupHintUntil = 0;
+  let cupHintCooldownUntil = 0;
+  let rubActiveMs = 0;
   let named = returning;
-  let touched = returning; // first touch dismisses the spotlight cue forever
+  let touched = returning || resumed; // a returning keeper already knows touch
   let farewellShown = false;
-  let cozyCelebrated = returning; // one-time mid-journey reward
-  let songCelebrated = returning;
+  let cozyCelebrated = returning || resumed; // don't re-celebrate restored meters
+  let songCelebrated = returning || (resumed && pod.memory.song >= 2);
+  // snapshot the live pod on every phase promotion (autosave persists it)
+  let lastSnapPhase: string = pod.phase;
+  const snapPhase = () => {
+    if (pod.phase === 'blooming' || pod.phase === 'hatched') return;
+    if (pod.phase === lastSnapPhase) return;
+    lastSnapPhase = pod.phase;
+    try {
+      app.save.update((data) => { data.hatchProgress = snapshotPod(pod); });
+    } catch { /* progress must never break play */ }
+  };
 
   const say = (key: string, text: string) => {
     if (said[key]) return;
@@ -326,6 +352,18 @@ export function hatch(app: App, root: HTMLElement): void {
         hum.chirp(760); // she sings back early — a promise of the WOW
         fx.discover(POD.x, POD.y - 80);
       }
+      snapPhase(); // persist phase promotions for interrupted sessions
+      // stall rescue: warm but never held → she needs stillness, not more rubbing.
+      // Re-arms (max 3×, ≥25s apart) while the stall persists.
+      if (cupHints < 3 && !nova.born && pod.phase !== 'blooming' && pod.phase !== 'hatched'
+        && now >= cupHintCooldownUntil
+        && shouldShowCupHint({ rubActiveMs, shelter: pod.shelter, gentleness: pod.memory.gentleness })) {
+        cupHints += 1;
+        cupHintUntil = now + 7000;
+        cupHintCooldownUntil = now + 25000;
+        fx.discover(POD.x, POD.y + 60);
+        say('cup', 'جرّب تحضنها بدون ما تتحرك… الدفا بيضل جوّاتها.');
+      }
 
       // bloom timeline → hatch
       if (pod.phase === 'blooming') {
@@ -426,6 +464,31 @@ export function hatch(app: App, root: HTMLElement): void {
       ctx.strokeStyle = `rgba(255,255,255,${0.6 * (1 - ripple)})`;
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(cx, cy, 70 + ripple * 70, 0, Math.PI * 2); ctx.stroke();
+    }
+    // stall rescue: cupped hands cradling the pod (stillness affordance, no text)
+    if (now < cupHintUntil && !rm) {
+      const pulse = 0.65 + 0.3 * Math.sin(now / 350);
+      ctx.strokeStyle = `rgba(255,205,110,${pulse})`;
+      ctx.lineWidth = 13; ctx.lineCap = 'round';
+      ctx.fillStyle = `rgba(255,220,150,${pulse})`;
+      // two arcs hugging the pod's lower sides + fingertip dots = hands, not rings
+      for (const [a0, a1] of [[0.55, 0.95], [-0.05, 0.45]]) {
+        ctx.beginPath();
+        ctx.arc(cx, cy + 10, 100, Math.PI * a0, Math.PI * a1);
+        ctx.stroke();
+        // fingertips: little dots at both arc ends read as hands, not rings
+        for (const a of [a0, a1]) {
+          ctx.beginPath();
+          ctx.arc(cx + Math.cos(Math.PI * a) * 100, cy + 10 + Math.sin(Math.PI * a) * 100, 8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      // three calm breaths rising slowly (stillness, not action)
+      ctx.fillStyle = `rgba(255,235,180,${pulse * 0.8})`;
+      for (let i = 0; i < 3; i++) {
+        const by = cy - 110 - ((now / 900 + i * 0.33) % 1) * 60;
+        ctx.beginPath(); ctx.arc(cx + (i - 1) * 22, by, 3.5, 0, Math.PI * 2); ctx.fill();
+      }
     }
     // ready glow ring (fills with hold — the only "meter", and it is light)
     if (pod.phase === 'ready') {
@@ -636,6 +699,7 @@ export function hatch(app: App, root: HTMLElement): void {
     holdTimer = window.setTimeout(() => {
       if (caring && travel < 26) {
         holding = true;
+        rubActiveMs = 0; // discovered stillness — stall clock restarts
         say('shelter', '…دافية… خليك حاضنها…');
       }
     }, 450);
@@ -654,6 +718,7 @@ export function hatch(app: App, root: HTMLElement): void {
       const speed = (dist / dtm) * 1000; // px/sec
       const intensity = Math.max(0, Math.min(1, speed / 1100));
       rubAcc += intensity * (dtm / 1000);
+      rubActiveMs += dtm; // stall clock: active rubbing time (any speed)
       rubPeak = Math.max(rubPeak, intensity);
       // paced application: ~9 care-ticks/sec, peak preserved for overheat feel
       if (now - lastRubApply >= 110) {
@@ -725,6 +790,7 @@ export function hatch(app: App, root: HTMLElement): void {
   // ================= SAVE + SKILLS =================
   function persistHatch(id: NovaIdentity): void {
     app.save.update((data) => {
+      delete data.hatchProgress; // journey complete — no stale snapshot
       data.hatch = {
         hatchedAt: Date.now(),
         tint: id.tint,
@@ -838,7 +904,8 @@ export function hatch(app: App, root: HTMLElement): void {
   }
   setTimeout(() => {
     if (!document.body.contains(canvas)) return;
-    if (!returning) say('arrive', 'ششش… في حدا صغير نايم هون. دفّيه بإيدك.');
+    if (resumed) say('back', 'رجعت! هي ناطرتك… كمّل من وين وقفت.');
+    else if (!returning) say('arrive', 'ششش… في حدا صغير نايم هون. دفّيه بإيدك.');
     else hum.chirp(nova.id.chirpBase);
   }, 1200);
 }

@@ -139,6 +139,12 @@ export interface SaveData {
   onboard: string[]; // guided first-steps completed (see src/world/guide.ts)
   avatar: Avatar; // my Nova — tint + charm, rendered in every scene
   hatch?: HatchSave; // creative-reset slice: pod → Nova memory (optional, no migration)
+  /** in-progress pod snapshot (jury: kids get interrupted). Cleared on hatch. */
+  hatchProgress?: {
+    temperament: string; warmth: number; shelter: number; song: number;
+    memory: { warmth: number; gentleness: number; song: number; overEvents: number };
+    at: number;
+  };
 }
 
 export interface ActivityContext {
