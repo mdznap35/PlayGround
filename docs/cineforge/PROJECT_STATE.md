@@ -1,65 +1,76 @@
 # CineForge — Project State
 
-Updated: 2026-11-03
-Current implementation branch: `feat/cineforge-cinematic-media-v2`
-Foundation branch: `feat/cineforge-studio-core`
-Foundation PR: [#11 — Draft](https://github.com/mdznap35/PlayGround/pull/11)
-Phase 1 PR: [#12 — Draft](https://github.com/mdznap35/PlayGround/pull/12)
+**Updated:** 2026-11-03  
+**Active implementation branch:** `feat/cineforge-cinematic-media-v2`  
+**Latest branch head at last verification:** `90d828d366039f051f53d2c72b8223ed9203e6e1`  
+**Render service:** `srv-dbl0am942hec73dgt93g` — live at https://cineforge-studio-b92r.onrender.com/  
+**Render deployment:** `dep-dbl0c27l4o3s73c1rj10` — live on commit `90d828d`  
+**Phase 1 Draft PR:** [#12](https://github.com/mdznap35/PlayGround/pull/12), base `feat/cineforge-studio-core`; not merged.  
+**Foundation Draft PR:** [#11](https://github.com/mdznap35/PlayGround/pull/11); not merged.
 
-## Goal
-Phone-first studio for professional short, long and cinematic videos, free-first, with truthful engine labels and no unapproved downloads or spending.
+## Product goal
+Phone-first, Arabic-first, free-first production studio for short and longer cinematic videos. It must preserve source/rights provenance and distinguish generated footage from supplied images, supplied video and conventional motion graphics.
 
-## Phase 0 — verified foundation
-- Foundation head: `7a0c0cf2be7c5d00761facf2894a83de6eb4fafd`.
-- Workflow run #3: `41658956511` — success.
-- Six foundation tests passed.
-- Inspected sample: 40 seconds, 1920×1080, 24 fps H.264; Arabic RTL visually reviewed with Pillow RAQM.
-- Original artifact: `13241725525` (temporary 7-day retention).
+## Current verified baseline
 
-## Phase 1 — cinematic media renderer
-- Implementation head: `bdcf485491c087f0556b277e7fa5cd706e09f754`.
-- Exact-head workflow: [run #8](https://github.com/mdznap35/PlayGround/actions/runs/41663752833) — success.
-- Browser JavaScript syntax check passed.
-- Python tests: **19/19 passed**.
-- End-to-end test generated a temporary still, voice track and music track, rendered an MP4, then used FFprobe to verify H.264, 1920×1080, 24 fps, AAC audio and approximately 3 seconds.
-- Sample output: 40.0 seconds, 1920×1080, 24 fps, H.264. The sample JSON intentionally requests no audio and is therefore silent.
-- Artifact: `cineforge-mp4-8`, ID `13242399847`, includes MP4, `render-report.json` and `ffprobe.json`; temporary 7-day retention.
-- Phase 1 Draft PR #12 targets the foundation branch and is not merged.
+### Phase 0 — foundation
+- Browser editor, local draft storage, storyboard preview, JSON job export.
+- Pillow + FFmpeg CPU renderer.
+- Foundation workflow #3: `41658956511` — success; six tests passed.
+- Sample MP4 inspected: 40 seconds, 1920×1080, 24 fps, H.264.
+- Arabic RTL shaping was checked with Pillow RAQM.
 
-### Delivered capabilities
-- Image-backed scenes using PNG/JPG/JPEG/WEBP assets.
-- Seven camera movements: static, push-in, pull-out, pan left/right/up/down.
-- Scene shot description, title and narration overlays.
-- Separate voiceover/music tracks, independent volume and mixing.
-- Backward compatibility with the previous single `audio_file` format.
-- Path checks block absolute paths, traversal, unsupported extensions and symlink escapes.
-- FFprobe gate checks codec, dimensions, fps, duration and requested audio presence.
+### Phase 1 — cinematic media renderer
+- Image-backed scenes with PNG/JPG/JPEG/WEBP.
+- Seven camera moves: static, push-in, pull-out, pan left/right/up/down.
+- Separate voiceover/music paths and volume controls, with legacy `audio_file` compatibility.
+- Media path and symlink escape validation.
+- FFprobe checks codec, aspect dimensions, frame rate, duration and requested audio presence.
+- Exact phase-1 workflow run #8 `41663752833`: success; 19/19 Python tests passed; image + synthetic voice + synthetic music end-to-end test passed.
+- PR #12 remains Draft and is not merged.
 
-### Limits and not yet done
-- No real text-to-video provider is connected. This renderer composes supplied stills/audio; it does not create photorealistic moving footage.
-- Integration test uses generated temporary assets, not user-provided media. No private personal files are committed.
-- Render deployment has not been performed.
-- Canva folder exists, but no Canva designs have been created.
+### Story planner workspace
+- `story-planner.html`, `story-planner.css`, `story-planner.js` provide a standalone Arabic-first planner.
+- Exports `cineforge.story-plan` schema version 2.
+- Fields include narrative beats, continuity entries, research-source status and narration timing.
+- It saves to current browser local storage; export JSON is the portable copy.
+- The prior branch `feat/cineforge-story-planner-v3` contains alternate work and docs but is divergent/behind; it is not the live deployment branch and must not be merged blindly.
 
-## Decisions and safety boundaries
-- Render is static interface hosting only; GitHub Actions performs CPU rendering.
-- Do not download model weights or large media packs without an estimate and explicit approval.
-- Free GPU options are experimental until model, quota, queue, license and account eligibility are verified.
-- Paid APIs remain disabled without an explicit budget approval.
-- The PlayGround repository is public: do not commit private media, personal voice recordings, secrets or material without redistribution rights.
+## Current implementation increment — story plan import
 
-## Next workstream — Phase 2: story and shot planner
-1. Structured narrative: hook, setup, development, turning point and resolution.
-2. Shot specification: purpose, subject/action, location, framing, camera, lighting, color, narration, on-screen text, sound cues and transitions.
-3. Continuity bible: recurring characters, props, environments, color and camera language.
-4. Dialogue timing estimator with overfull/underfull scene warnings.
-5. Fact-check fields and source notes for documentary/educational projects.
-6. Versioned JSON round-trip with no loss of authored content.
-7. Preserve the current renderer contract.
+Files added/changed on the active branch:
+- `apps/cineforge-studio/story-plan-import.js` — validates exported story-plan v2 JSON and maps beats to renderer-safe scenes.
+- `apps/cineforge-studio/tests/story-plan-import.test.cjs` — Node tests for schema, scene limits, weighted timing, Arabic text, and provenance.
+- `apps/cineforge-studio/index.html` — import button and importer script.
+- `apps/cineforge-studio/app.js` — imports beats into editable storyboard scenes and persists the planning snapshot.
+- `apps/cineforge-studio/styles.css` — responsive import control.
+- `.github/workflows/cineforge-render.yml` — adds importer syntax checks and Node unit tests.
 
-## Phase 2 acceptance
-- Round-trip tests preserve all scene/story/continuity fields.
-- Script duration estimates reconcile with scene time budgets.
-- Continuity notes survive save/reload/export.
-- Phase 1 19-test suite remains green.
-- New PR remains separate and Draft until reviewed; no merge or deployment without authorization.
+**Timing contract:** each imported scene must be 3–90 seconds; total render duration <= 900 seconds; invalid or unallocatable plans are rejected before changing the storyboard. The renderer's original `schema_version: 1` remains unchanged.
+
+**CI run for import increment:** awaiting the workflow triggered by the latest commits; do not mark this increment complete until its exact-head run succeeds and its logs are inspected.
+
+## Deployment facts
+- Render hosts the static UI only. It does not render MP4.
+- Service auto-deploys from `feat/cineforge-cinematic-media-v2`.
+- Latest verified Render deploy `dep-dbl0c27l4o3s73c1rj10`: `live`.
+- GitHub Actions run #11 `41670364586` passed on commit `d153c8c` before the story-plan import files were added. It verifies the earlier planner page and renderer baseline, **not** the new importer.
+- New code will trigger another workflow due the updated path filters.
+
+## Free-first constraints
+- No paid APIs, paid GPU, paid GitHub runner or paid storage without explicit approval.
+- No model weights or bulk media downloads without a size estimate and approval.
+- Do not store private footage, personal voice recordings or secret keys in this public repository.
+- Render Static Site is only the website host; Actions has usage quotas and temporary artifact retention.
+- A "free AI video provider" must be checked against official, current quota, license, region and account eligibility before activation.
+
+## Next actions
+1. Verify exact-head CI for story-plan import and fix every failure.
+2. Run independent review of the import contract, especially duration edge cases and preservation of the old renderer schema.
+3. Add the asset library and rights/provenance manifest.
+4. Add Arabic SRT/VTT authoring, audio timing and sound QA.
+5. Add a multi-track composition model and transitions without breaking old job JSON.
+6. Add export QA profiles, reproducible render metadata and phone-first backup/restore.
+7. Evaluate an optional free AI provider only after quota and license evidence; otherwise keep it disabled.
+
+Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
