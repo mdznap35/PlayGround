@@ -381,7 +381,7 @@
   }
 
   function addScene() {
-    const plan = planner.createScenePlan(Math.max(0, scenes.length - 1), Math.max(1, scenes.length + 1), readForm());
+    const plan = planner.createScenePlan(scenes.length, scenes.length + 1, readForm());
     scenes.push({...plan, id:Date.now(), title:"مشهد جديد", narration:"اكتب الرسالة التي تريد إيصالها في هذا المشهد.", visual:"حدد العنصر الرئيسي والحركة والإضاءة والإحساس البصري.", image_file:"", seconds:10});
     selectedScene = scenes.length - 1;
     renderAll();
@@ -539,9 +539,17 @@
 
   function importDemo() {
     const job = defaultProject();
-    scenes = job.scenes;
+    storyArc = planner.createStoryArc(readForm());
+    writeStoryArcForm(storyArc);
+    writeContinuityForm({visual_language:readForm().style});
+    scenes = job.scenes.map((scene, index) => ({
+      ...planner.createScenePlan(index, job.scenes.length, readForm()),
+      ...scene,
+      id:scene.id
+    }));
     selectedScene = 0;
     renderAll();
+    scheduleSave();
   }
 
   $("generateButton").addEventListener("click", makeOutline);

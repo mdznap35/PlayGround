@@ -6,6 +6,7 @@ on:
       - main
       - feat/cineforge-studio-core
       - feat/cineforge-cinematic-media-v2
+      - feat/cineforge-story-planner-v3
     paths:
       - "apps/cineforge-studio/jobs/*.json"
       - "apps/cineforge-studio/jobs/**/*.json"
