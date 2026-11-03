@@ -94,3 +94,8 @@ Files changed on the active branch:
 - The current renderer composes supplied stills/audio and designed motion graphics; it does not claim to generate photorealistic video from text.
 
 Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
+
+## Latest follow-up change
+- Commit `0d6bf2cea659965dd80c5ffb0e2ec077799cf166`: fixed story-plan import so the editor preserves the exact imported runtime instead of silently rounding it to the nearest preset (30/60/90/180/300 seconds). A custom imported duration is now represented as a selectable imported option.
+- This change requires the newly triggered exact-head CI run to pass before it is considered verified.
+- Next implementation task: browser-level round-trip tests and a per-scene narration-fit indicator, tracked in Issue #13.
