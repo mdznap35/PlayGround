@@ -18,9 +18,11 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw, ImageFont, features
 except ImportError as exc:  # pragma: no cover - actionable runtime error
     raise SystemExit("Missing Pillow. Install requirements.txt first.") from exc
+
+RAQM_AVAILABLE = features.check_feature("raqm")
 
 MAX_SCENES = 40
 MAX_SCENE_SECONDS = 90
@@ -88,13 +90,23 @@ def validate_job(job: Any) -> dict[str, Any]:
 
 
 def shape_text(text: str) -> str:
-    """Return Arabic-shaped, bidi-aware text when optional packages are installed."""
+    """Prepare text for the active renderer without applying bidi twice."""
+    if RAQM_AVAILABLE:
+        # Pillow's RAQM engine performs Arabic shaping and bidirectional layout itself.
+        return text
     try:
         import arabic_reshaper
         from bidi.algorithm import get_display
         return get_display(arabic_reshaper.reshape(text))
     except Exception:
         return text
+
+
+def text_layout_options(text: str) -> dict[str, str]:
+    """Use native RTL layout only when the text contains Arabic and RAQM is available."""
+    if RAQM_AVAILABLE and any("\u0600" <= char <= "\u06ff" for char in text):
+        return {"direction": "rtl", "language": "ar"}
+    return {}
 
 
 def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -104,7 +116,8 @@ def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont | ImageFont.Im
     ]
     for candidate in candidates:
         if Path(candidate).is_file():
-            return ImageFont.truetype(candidate, size=size)
+            options = {"layout_engine": ImageFont.Layout.RAQM} if RAQM_AVAILABLE else {}
+            return ImageFont.truetype(candidate, size=size, **options)
     return ImageFont.load_default()
 
 
@@ -116,7 +129,7 @@ def wrap_lines(draw: ImageDraw.ImageDraw, text: str, selected_font: ImageFont.Im
     current = words[0]
     for word in words[1:]:
         trial = current + " " + word
-        if draw.textbbox((0, 0), trial, font=selected_font)[2] <= max_width:
+        if draw.textbbox((0, 0), trial, font=selected_font, **text_layout_options(trial))[2] <= max_width:
             current = trial
         else:
             lines.append(current)
@@ -180,13 +193,13 @@ def draw_scene(scene: dict[str, Any], index: int, count: int, aspect: str, style
     title_lines = wrap_lines(draw, scene["title"], title_font, max_text_width)[:3]
     title_y = int(height * .48) if aspect != "9:16" else int(height * .45)
     for line in title_lines:
-        draw.text((width-margin, title_y), line, font=title_font, fill=(245, 248, 250, 255), anchor="ra")
+        draw.text((width-margin, title_y), line, font=title_font, fill=(245, 248, 250, 255), anchor="ra", **text_layout_options(line))
         title_y += int(title_font.size * 1.35)
 
     narration_lines = wrap_lines(draw, scene["narration"], body_font, max_text_width)[:4]
     body_y = title_y + int(height * .04)
     for line in narration_lines:
-        draw.text((width-margin, body_y), line, font=body_font, fill=(213, 226, 235, 225), anchor="ra")
+        draw.text((width-margin, body_y), line, font=body_font, fill=(213, 226, 235, 225), anchor="ra", **text_layout_options(line))
         body_y += int(body_font.size * 1.65)
 
     footer_y = height - int(height*.105)
