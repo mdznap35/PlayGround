@@ -39,7 +39,11 @@ The studio is static. It does not need a Render backend, persistent disk, databa
 
 ## Plan a story
 
-Open `story-planner.html` from the studio navigation. Define the audience, goal, premise, format and tone; write the seven narrative beats; record characters, locations and props in the continuity bible; and track research sources with verification status. Paste narration to estimate word count and duration against the target runtime. Export a `cineforge.story-plan` JSON file. The planner autosaves only in the current browser's local storage; export the JSON to keep a portable copy.
+Open `story-planner.html` from the studio navigation. Define the audience, goal, premise, format and tone; write the seven narrative beats; record characters, locations and props in the continuity bible; and track research sources with verification status. Paste narration to estimate word count and duration against the target runtime. Export a `cineforge.story-plan` JSON file. Return to the main editor and choose **استيراد خطة القصة JSON** to convert the beats into editable renderer scenes. The importer preserves a bounded planning snapshot in the exported render job. Current render constraints still apply: 3–90 seconds per scene and 15 minutes total. The planner autosaves only in the current browser's local storage; export the JSON to keep a portable copy.
+
+## Roadmap and project status
+
+The detailed Arabic execution roadmap is in [docs/cineforge/MASTER_ROADMAP_AR.md](../../docs/cineforge/MASTER_ROADMAP_AR.md). Current evidence and blockers are tracked in [PROJECT_STATE.md](../../docs/cineforge/PROJECT_STATE.md), with implementation tasks in GitHub Issues #13–#19.
 
 ## Render a video
 
