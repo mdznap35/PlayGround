@@ -31,6 +31,8 @@ Open `index.html` in a browser, or deploy this folder as a Render Static Site:
 
 The studio is static. It does not need a Render backend, persistent disk, database, or always-on server. Render's free static hosting is suitable for the interface; video rendering happens separately in GitHub Actions.
 
+**Simplest deployment:** in Render, choose **New → Blueprint**, connect this repository, and select branch `feat/cineforge-studio-core`. The root `render.yaml` defines the free static site, app root, and publish path. Render will show the service details before creation.
+
 ## Render a video
 
 1. In the studio, create/edit a project and select **Download job JSON**.
