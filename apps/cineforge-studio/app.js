@@ -4,7 +4,9 @@
   const $ = (id) => document.getElementById(id);
   const STORAGE_KEY = "cineforge-studio-project-v1";
   const storyPlanImporter = window.CineForgeStoryPlanImporter;
+  const narrationFit = window.CineForgeNarrationFit;
   if (!storyPlanImporter) throw new Error("CineForge Story Plan importer failed to load.");
+  if (!narrationFit) throw new Error("CineForge narration-fit analyzer failed to load.");
   let importedStoryPlan = null;
   const palette = {
     cinematic: ["#092039", "#17465a", "#b8f3d3"],
@@ -132,6 +134,22 @@
     return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
   }
 
+  function updateNarrationFitBadge(badge, scene) {
+    const result = narrationFit.analyze(scene.narration, scene.seconds, $("language").value);
+    badge.dataset.status = result.status;
+    badge.textContent = result.label;
+    badge.title = result.detail;
+    badge.setAttribute("aria-label", result.detail);
+  }
+
+  function refreshNarrationFitIndicators() {
+    [...$("sceneList").querySelectorAll(".scene-card")].forEach(card => {
+      const scene = scenes[Number(card.dataset.index)];
+      const badge = card.querySelector(".narration-fit");
+      if (scene && badge) updateNarrationFitBadge(badge, scene);
+    });
+  }
+
   function createSceneCard(scene, index) {
     scene.image_file = scene.image_file || "";
     scene.camera_move = scene.camera_move || "push_in";
@@ -160,7 +178,12 @@
     narration.rows = 2;
     narration.placeholder = "نص التعليق أو الجملة التي تظهر للمشاهد";
     narration.setAttribute("aria-label", "نص المشهد " + (index + 1));
-    narration.addEventListener("input", () => { scene.narration = narration.value; scheduleSave(); });
+    narration.addEventListener("input", () => { scene.narration = narration.value; updateNarrationFitBadge(fitBadge, scene); scheduleSave(); });
+
+    const fitBadge = document.createElement("div");
+    fitBadge.className = "narration-fit";
+    fitBadge.setAttribute("role", "status");
+    updateNarrationFitBadge(fitBadge, scene);
 
     const visual = document.createElement("textarea");
     visual.className = "scene-visual";
@@ -204,7 +227,7 @@
     camera.value = scene.camera_move;
     camera.addEventListener("change", () => { scene.camera_move = camera.value; scheduleSave(); });
     meta.append(label, camera);
-    content.append(title, narration, visual, assetWrap, meta);
+    content.append(title, narration, fitBadge, visual, assetWrap, meta);
 
     const tools = document.createElement("div");
     tools.className = "scene-tools";
@@ -232,7 +255,7 @@
     duration.addEventListener("change", () => {
       scene.seconds = Math.max(3, Math.min(90, Number(duration.value) || 3));
       duration.value = String(scene.seconds);
-      renderTimeline(); scheduleSave();
+      renderTimeline(); updateNarrationFitBadge(fitBadge, scene); scheduleSave();
     });
     const right = document.createElement("div");
     right.className = "scene-side";
@@ -459,8 +482,8 @@
   $("closeHelp").addEventListener("click", () => $("helpDialog").close());
   $("musicVolume").addEventListener("input", () => { updateMusicVolumeLabel(); scheduleSave(); });
   ["projectTitle","projectIdea","language","style","aspect","targetDuration","voiceoverFile","musicFile"].forEach(id => {
-    $(id).addEventListener("input", () => { updatePreview(); scheduleSave(); });
-    $(id).addEventListener("change", () => { updatePreview(); scheduleSave(); });
+    $(id).addEventListener("input", () => { updatePreview(); if (id === "language") refreshNarrationFitIndicators(); scheduleSave(); });
+    $(id).addEventListener("change", () => { updatePreview(); if (id === "language") refreshNarrationFitIndicators(); scheduleSave(); });
   });
 
   if (!restoreState()) importDemo();
