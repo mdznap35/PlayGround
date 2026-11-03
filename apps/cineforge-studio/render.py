@@ -23,7 +23,7 @@ PALETTES = {
     "promo": ((42,28,48),(117,65,83),(240,199,123)),
 }
 
-def validate_media_reference(value: Any, label: str, extensions: set[str], required_folder: str) -> str | None:
+def validate_media_reference(value: Any, label: str, extensions: set[str], required_folder: str, allow_root: bool = False) -> str | None:
     if value in (None, ""):
         return None
     if not isinstance(value, str) or len(value) > 180:
@@ -33,8 +33,10 @@ def validate_media_reference(value: Any, label: str, extensions: set[str], requi
     path = PurePosixPath(value)
     if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
         raise ValueError(f"{label} must not contain absolute paths, '.' or '..'.")
-    if len(path.parts) < 2 or path.parts[0] != required_folder:
-        raise ValueError(f"{label} must be stored in jobs/{required_folder}/.")
+    in_required_folder = len(path.parts) >= 2 and path.parts[0] == required_folder
+    in_job_root = allow_root and len(path.parts) == 1
+    if not (in_required_folder or in_job_root):
+        raise ValueError(f"{label} must be stored in jobs/{required_folder}/" + (" or directly in jobs/." if allow_root else "."))
     if path.suffix.lower() not in extensions:
         raise ValueError(f"{label} has an unsupported file extension.")
     return path.as_posix()
@@ -61,7 +63,7 @@ def validate_job(job: Any) -> dict[str, Any]:
         raise ValueError("fps must be 24, 25, or 30.") from exc
     if fps not in {24, 25, 30}:
         raise ValueError("fps must be 24, 25, or 30.")
-    legacy_audio = validate_media_reference(job.get("audio_file"), "audio_file", AUDIO_EXTENSIONS, "audio")
+    legacy_audio = validate_media_reference(job.get("audio_file"), "audio_file", AUDIO_EXTENSIONS, "audio", allow_root=True)
     voiceover = validate_media_reference(job.get("voiceover_file"), "voiceover_file", AUDIO_EXTENSIONS, "audio")
     music = validate_media_reference(job.get("music_file"), "music_file", AUDIO_EXTENSIONS, "audio")
     if legacy_audio and (voiceover or music):

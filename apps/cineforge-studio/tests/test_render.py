@@ -31,6 +31,12 @@ class JobValidationTests(unittest.TestCase):
     def test_rejects_unsupported_schema(self):
         job=sample_job(); job["schema_version"]=99
         with self.assertRaisesRegex(ValueError,"Unsupported schema"): validate_job(job)
+    def test_legacy_audio_file_in_jobs_root_remains_compatible(self):
+        job = sample_job()
+        job["audio_file"] = "narration.mp3"
+        result = validate_job(job)
+        self.assertEqual(result["audio_file"], "narration.mp3")
+
     def test_accepts_asset_camera_and_audio_manifest(self):
         job=sample_job(); job["scenes"][0].update({"image_file":"assets/space-01.webp","camera_move":"pan_left"})
         job["voiceover_file"]="audio/narration.mp3"; job["music_file"]="audio/score.wav"

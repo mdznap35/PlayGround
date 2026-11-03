@@ -41,7 +41,7 @@ The studio is static. It does not need a Render backend, persistent disk, databa
 1. In the studio, create/edit a project and select **Download job JSON**.
 2. Upload permitted still images into `apps/cineforge-studio/jobs/assets/` and audio into `apps/cineforge-studio/jobs/audio/`.
 3. Add the JSON file to `apps/cineforge-studio/jobs/`. Use paths relative to that directory, for example `assets/scene-01.webp`, `audio/voiceover.mp3` and `audio/music-bed.mp3`.
-4. Set each scene's `image_file` and `camera_move`; set top-level `voiceover_file`, `music_file` and `music_volume` as needed.
+4. Set each scene's `image_file` and `camera_move`; set top-level `voiceover_file`, `music_file` and `music_volume` as needed. Older projects using a single `audio_file` at the root of `jobs/` remain supported.
 5. A push changing a job JSON or its image/audio assets starts the workflow. You can also run **Actions → CineForge CPU Renderer → Run workflow** and choose the job file.
 6. Download the artifact. It contains the MP4 and technical QA reports.
 
