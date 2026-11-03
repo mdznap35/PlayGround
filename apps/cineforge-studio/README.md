@@ -55,7 +55,7 @@ The scene editor shows a per-scene estimate based on word count, scene duration 
 
 ## Roadmap and project status
 
-The detailed Arabic execution roadmap is in [docs/cineforge/MASTER_ROADMAP_AR.md](../../docs/cineforge/MASTER_ROADMAP_AR.md). Current evidence and blockers are tracked in [PROJECT_STATE.md](../../docs/cineforge/PROJECT_STATE.md), with implementation tasks in GitHub Issues #13–#19.
+The detailed Arabic execution roadmap is in [docs/cineforge/MASTER_ROADMAP_AR.md](../../docs/cineforge/MASTER_ROADMAP_AR.md). The current engine inventory and open-source integration decisions are in [ENGINE_EVALUATION_AR.md](../../docs/cineforge/ENGINE_EVALUATION_AR.md). Current evidence and blockers are tracked in [PROJECT_STATE.md](../../docs/cineforge/PROJECT_STATE.md), with implementation tasks in GitHub Issues #13–#19.
 
 ## Render a video
 
