@@ -1,6 +1,6 @@
 # CineForge Studio — Master Roadmap
 
-Project state: Phase 0 verified; Phase 1 implementation and CI are verified on Draft PR #12; Phase 2 story/shot planner is next.
+Project state: Phase 0 and Phase 1 baseline verified; the Arabic story planner exists; story-plan import into the renderer workspace is the active implementation increment. See [the detailed Arabic roadmap](./MASTER_ROADMAP_AR.md).
 Operating constraints: phone-first, free-first, no computer, no paid APIs, no model-weight downloads or bulk media downloads without an estimate and explicit approval. The existing Render host is optional; GitHub is the source of truth and Canva is for design handoff.
 
 ## Final product
