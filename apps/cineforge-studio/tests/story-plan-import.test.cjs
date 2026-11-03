@@ -70,7 +70,7 @@ test("rejects plans whose duration cannot be allocated within renderer limits", 
 });
 
 test("clamps arbitrary beat weights and bounds imported text", () => {
-  const input = plan({ title: "A".repeat(300), beats: [{ title: "T".repeat(300), prompt:"P", content:"C", share: 1000 }] });
+  const input = plan({ title: "A".repeat(300), target_minutes: 1, beats: [{ title: "T".repeat(300), prompt:"P", content:"C", share: 1000 }] });
   const result = importer.convert(input);
   assert.equal(result.title.length, 90);
   assert.equal(result.scenes[0].title.length, 100);
