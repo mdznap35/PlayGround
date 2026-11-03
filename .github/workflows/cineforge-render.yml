@@ -5,9 +5,13 @@ on:
     branches:
       - main
       - feat/cineforge-studio-core
+      - feat/cineforge-cinematic-media-v2
     paths:
-      - "apps/cineforge-studio/jobs/*.json"
+      - "apps/cineforge-studio/jobs/**/*.json"
+      - "apps/cineforge-studio/jobs/assets/**"
+      - "apps/cineforge-studio/jobs/audio/**"
       - "apps/cineforge-studio/render.py"
+      - "apps/cineforge-studio/tests/**"
       - ".github/workflows/cineforge-render.yml"
   workflow_dispatch:
     inputs:
@@ -50,6 +54,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r apps/cineforge-studio/requirements.txt
 
+      - name: Check browser JavaScript syntax
+        run: node --check apps/cineforge-studio/app.js
+
       - name: Run validation tests
         run: python -m unittest discover -s apps/cineforge-studio/tests -v
 
@@ -65,7 +72,6 @@ jobs:
           else
             JOB_FILE="$(python - <<'PY'
           import json, os
-          from pathlib import PurePosixPath
           payload = json.load(open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8"))
           candidates = []
           for commit in payload.get("commits", []):
@@ -74,15 +80,17 @@ jobs:
           print(candidates[-1] if candidates else "")
           PY
           )"
-            if [ -z "$JOB_FILE" ]; then
-              JOB_FILE="apps/cineforge-studio/jobs/demo.json"
-            fi
+            if [ -z "$JOB_FILE" ]; then JOB_FILE="apps/cineforge-studio/jobs/demo.json"; fi
           fi
-          case "$JOB_FILE" in
-            apps/cineforge-studio/jobs/*.json) ;;
-            *) echo "Rejected job path: $JOB_FILE"; exit 1 ;;
-          esac
-          test -f "$JOB_FILE"
+          JOB_FILE="$(python - "$JOB_FILE" <<'PY'
+          import pathlib, sys
+          root = pathlib.Path("apps/cineforge-studio/jobs").resolve()
+          candidate = pathlib.Path(sys.argv[1]).resolve()
+          if root not in candidate.parents or candidate.suffix.lower() != ".json" or not candidate.is_file():
+              raise SystemExit("Rejected job file: it must be an existing JSON file inside apps/cineforge-studio/jobs/")
+          print(candidate.relative_to(pathlib.Path.cwd()))
+          PY
+          )"
           echo "file=$JOB_FILE" >> "$GITHUB_OUTPUT"
           echo "Selected job: $JOB_FILE"
 
@@ -94,10 +102,40 @@ jobs:
           mkdir -p dist
           python apps/cineforge-studio/render.py "${{ steps.job.outputs.file }}" --output dist/cineforge.mp4
 
-      - name: Upload video artifact
+      - name: Inspect MP4 streams and technical profile
+        env:
+          JOB_FILE: ${{ steps.job.outputs.file }}
+        run: |
+          ffprobe -v error -show_entries format=duration,size -show_entries stream=codec_type,codec_name,width,height,r_frame_rate -of json dist/cineforge.mp4 > dist/ffprobe.json
+          python - <<'PY'
+          import json, os, pathlib
+          probe=json.load(open("dist/ffprobe.json",encoding="utf-8"))
+          job=json.load(open(os.environ["JOB_FILE"],encoding="utf-8"))
+          video=next((s for s in probe.get("streams",[]) if s.get("codec_type")=="video"),None)
+          if not video or video.get("codec_name")!="h264": raise SystemExit("Quality gate: H.264 video stream missing.")
+          expected={"16:9":(1920,1080),"9:16":(1080,1920),"1:1":(1080,1080)}[job.get("aspect","16:9")]
+          if (video.get("width"),video.get("height"))!=expected: raise SystemExit("Quality gate: unexpected video dimensions.")
+          if video.get("r_frame_rate") not in ("24/1","25/1","30/1"): raise SystemExit("Quality gate: unexpected frame rate.")
+          expected_duration=sum(int(s.get("seconds",8)) for s in job["scenes"])
+          actual_duration=float(probe.get("format",{}).get("duration",0))
+          if abs(actual_duration-expected_duration)>0.8: raise SystemExit("Quality gate: duration differs from the project timeline.")
+          audio_expected=bool(job.get("audio_file") or job.get("voiceover_file") or job.get("music_file"))
+          audio_found=any(s.get("codec_type")=="audio" for s in probe.get("streams",[]))
+          if audio_expected and not audio_found: raise SystemExit("Quality gate: requested audio stream missing.")
+          report={"project_title":job.get("title"),"expected_dimensions":expected,"expected_duration":expected_duration,
+                  "actual_duration":actual_duration,"video":video,"audio_expected":audio_expected,
+                  "audio_found":audio_found,"format":probe.get("format")}
+          pathlib.Path("dist/render-report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
+          print(json.dumps(report,ensure_ascii=False,indent=2))
+          PY
+
+      - name: Upload video and QA report
         uses: actions/upload-artifact@v4
         with:
           name: cineforge-mp4-${{ github.run_number }}
-          path: dist/cineforge.mp4
+          path: |
+            dist/cineforge.mp4
+            dist/render-report.json
+            dist/ffprobe.json
           if-no-files-found: error
           retention-days: 7

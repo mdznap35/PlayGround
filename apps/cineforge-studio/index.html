@@ -46,7 +46,7 @@
         <a class="rail-link active" href="#projectPanel"><span class="rail-icon">✳</span><span>المشروع</span></a>
         <a class="rail-link" href="#storyboardPanel"><span class="rail-icon">▤</span><span>لوحة المشاهد</span></a>
         <a class="rail-link" href="#exportPanel"><span class="rail-icon">↗</span><span>التصدير</span></a>
-        <div class="rail-bottom"><span class="rail-version">BUILD 0.1.0</span><span class="rail-status"><b></b> CORE READY</span></div>
+        <div class="rail-bottom"><span class="rail-version">BUILD 0.2.0</span><span class="rail-status"><b></b> CORE READY</span></div>
       </aside>
 
       <div class="main-column">
@@ -62,6 +62,9 @@
             <label class="field"><span>النمط البصري</span><select id="style"><option value="cinematic">سينمائي هادئ</option><option value="documentary">وثائقي تحريري</option><option value="educational">تعليمي واضح</option><option value="editorial">مجلة مرئية</option><option value="promo">إعلاني حيوي</option></select></label>
             <label class="field"><span>الأبعاد</span><select id="aspect"><option value="16:9">16:9 — يوتيوب</option><option value="9:16">9:16 — ريلز / شورتس</option><option value="1:1">1:1 — مربع</option></select></label>
             <label class="field"><span>طول الفيديو المستهدف</span><select id="targetDuration"><option value="30">30 ثانية</option><option value="60" selected>دقيقة واحدة</option><option value="90">90 ثانية</option><option value="180">3 دقائق</option><option value="300">5 دقائق</option></select></label>
+            <label class="field"><span>ملف التعليق الصوتي داخل jobs/audio/ (اختياري)</span><input id="voiceoverFile" maxlength="180" placeholder="audio/voiceover.mp3" dir="ltr"></label>
+            <label class="field"><span>ملف الموسيقى داخل jobs/audio/ (اختياري)</span><input id="musicFile" maxlength="180" placeholder="audio/music-bed.mp3" dir="ltr"></label>
+            <label class="field"><span>مستوى الموسيقى الخلفية</span><div class="range-field"><input id="musicVolume" type="range" min="0" max="0.5" step="0.01" value="0.18"><output id="musicVolumeValue">18%</output></div></label>
           </div>
           <div class="panel-footer">
             <span class="micro-note">المخطط الأولي قابل للتعديل بالكامل قبل التصدير.</span>
@@ -83,7 +86,7 @@
                 <div class="preview-overlay"><span class="preview-chip">CINEFORGE / PREVIEW</span><span class="preview-time" id="previewTime">00:12</span></div>
               </div>
               <div class="preview-caption"><span class="preview-indicator"></span><span id="previewTitle">افتتاحية: اتساع السؤال</span></div>
-              <p class="preview-disclaimer">هذه معاينة تصميمية ثابتة للمشهد، وليست فيديو مولّداً بعد.</p>
+              <p class="preview-disclaimer" id="previewAsset">هذه معاينة تصميمية ثابتة؛ مسار الصورة يرفق عند الرندر السحابي.</p>
             </div>
           </div>
           <div class="timeline-footer">
@@ -110,13 +113,13 @@
           </div>
           <div class="next-instructions">
             <span class="section-index">NEXT STEP / CLOUD RENDER</span>
-            <ol><li>نزّل ملف JSON.</li><li>ارفعه إلى مجلد <code>jobs/</code> في المستودع.</li><li>شغّل سير العمل <code>CineForge CPU Renderer</code> من تبويب Actions.</li><li>نزّل ملف MP4 من Artifact الناتج.</li></ol>
+            <ol><li>نزّل ملف JSON.</li><li>ارفع الصور إلى <code>jobs/assets/</code> والصوت إلى <code>jobs/audio/</code>.</li><li>ارفع ملف JSON إلى <code>jobs/</code> ثم شغّل سير العمل من Actions.</li><li>نزّل MP4 وتقرير الفحص من Artifact الناتج.</li></ol>
             <a href="https://github.com/mdznap35/PlayGround/actions" target="_blank" rel="noopener">فتح GitHub Actions <span>↗</span></a>
           </div>
         </section>
       </div>
     </div>
-    <footer class="footer"><span>© CINEFORGE STUDIO</span><span>DESIGNED FOR IDEAS. BUILT FOR THE CLOUD.</span><span>0.1.0 / FOUNDATION</span></footer>
+    <footer class="footer"><span>© CINEFORGE STUDIO</span><span>DESIGNED FOR IDEAS. BUILT FOR THE CLOUD.</span><span>0.2.0 / CINEMATIC MEDIA</span></footer>
   </main>
 
   <dialog id="helpDialog" class="help-dialog">

@@ -13,7 +13,10 @@ CineForge is a mobile-friendly, Arabic-first storyboard studio with a small, rep
 - Editable scene title, narration text, visual direction and duration.
 - Browser-local autosave and JSON export.
 - MP4 export on GitHub Actions, with a downloadable artifact retained for 7 days.
-- Optional voice/music track when an audio file is committed beside the job JSON.
+- Image-backed scenes from assets committed under jobs/assets/.
+- Scene camera moves: static, push-in, pull-out, pan left/right/up/down.
+- Separate voiceover and music tracks from jobs/audio/, with independent volume controls.
+- Machine-readable FFprobe report in every rendered artifact.
 
 ## What it does not claim to do
 
@@ -36,11 +39,13 @@ The studio is static. It does not need a Render backend, persistent disk, databa
 ## Render a video
 
 1. In the studio, create/edit a project and select **Download job JSON**.
-2. Add the JSON file to `apps/cineforge-studio/jobs/` in this repository and commit it. Keep optional audio in the same folder and reference it with `audio_file` (for example `narration.mp3`).
-3. A push to the project branch or `main` that changes a job JSON starts the render workflow automatically. You can also run **Actions → CineForge CPU Renderer → Run workflow** and choose the job file.
-4. Open the completed run and download the `cineforge-mp4` artifact. It contains the MP4.
+2. Upload permitted still images into `apps/cineforge-studio/jobs/assets/` and audio into `apps/cineforge-studio/jobs/audio/`.
+3. Add the JSON file to `apps/cineforge-studio/jobs/`. Use paths relative to that directory, for example `assets/scene-01.webp`, `audio/voiceover.mp3` and `audio/music-bed.mp3`.
+4. Set each scene's `image_file` and `camera_move`; set top-level `voiceover_file`, `music_file` and `music_volume` as needed.
+5. A push changing a job JSON or its image/audio assets starts the workflow. You can also run **Actions → CineForge CPU Renderer → Run workflow** and choose the job file.
+6. Download the artifact. It contains the MP4 and technical QA reports.
 
-The sample job is `jobs/demo.json`. The renderer validates paths, duration, scene count and text lengths before processing.
+The sample job is `jobs/demo.json`. The renderer validates paths, duration, scene count, text lengths, camera movement and media extensions before processing. Image/audio files must already be committed: the workflow does not download media.
 
 ## Renderer limits
 
@@ -48,7 +53,9 @@ The sample job is `jobs/demo.json`. The renderer validates paths, duration, scen
 - Each scene: 3–90 seconds.
 - Total timeline: at most 900 seconds (15 minutes).
 - 1080p, 24 fps, H.264 MP4.
-- Optional audio must be a supported file committed inside the same `jobs/` directory.
+- Images must be PNG/JPG/JPEG/WEBP under `jobs/assets/`; audio must be MP3/WAV/M4A/OGG/AAC/FLAC under `jobs/audio/`.
+- All media paths are validated and cannot escape the job folder.
+- Audio volume: music 0–1; voiceover 0–2.
 - Artifacts are temporary (7-day retention). Download important exports to your phone.
 
 ## Local checks

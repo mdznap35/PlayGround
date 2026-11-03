@@ -31,7 +31,10 @@
     style: $("style").value,
     aspect: $("aspect").value,
     target_duration: Number($("targetDuration").value),
-    scenes: templates.map((scene, index) => ({...scene, seconds: 12, id: index + 1}))
+    voiceover_file: $("voiceoverFile").value.trim(),
+    music_file: $("musicFile").value.trim(),
+    music_volume: Number($("musicVolume").value),
+    scenes: templates.map((scene, index) => ({...scene, seconds: 12, id: index + 1, image_file: "", camera_move: "push_in"}))
   });
 
   function readForm() {
@@ -41,7 +44,10 @@
       language: $("language").value,
       style: $("style").value,
       aspect: $("aspect").value,
-      target_duration: Number($("targetDuration").value)
+      target_duration: Number($("targetDuration").value),
+      voiceover_file: $("voiceoverFile").value.trim(),
+      music_file: $("musicFile").value.trim(),
+      music_volume: Number($("musicVolume").value)
     };
   }
 
@@ -65,6 +71,8 @@
         title: i === 0 ? base.title : (i === count - 1 ? "الخاتمة: الفكرة التي تبقى" : base.title),
         narration: i === 0 ? base.narration.replace("ابدأ بسؤال", "انطلق من الفكرة") : base.narration,
         visual: base.visual,
+        image_file: "",
+        camera_move: i % 3 === 0 ? "push_in" : (i % 3 === 1 ? "pan_left" : "pan_right"),
         seconds
       });
     }
@@ -85,6 +93,9 @@
   }
 
   function createSceneCard(scene, index) {
+    scene.image_file = scene.image_file || "";
+    scene.camera_move = scene.camera_move || "push_in";
+    scene.visual = scene.visual || "";
     const card = document.createElement("article");
     card.className = "scene-card" + (index === selectedScene ? " selected" : "");
     card.dataset.index = String(index);
@@ -107,54 +118,84 @@
     narration.value = scene.narration;
     narration.maxLength = 700;
     narration.rows = 2;
+    narration.placeholder = "نص التعليق أو الجملة التي تظهر للمشاهد";
     narration.setAttribute("aria-label", "نص المشهد " + (index + 1));
     narration.addEventListener("input", () => { scene.narration = narration.value; scheduleSave(); });
+
+    const visual = document.createElement("textarea");
+    visual.className = "scene-visual";
+    visual.value = scene.visual;
+    visual.maxLength = 500;
+    visual.rows = 2;
+    visual.placeholder = "وصف اللقطة: الموضوع، الفعل، الإضاءة، التكوين...";
+    visual.setAttribute("aria-label", "الوصف البصري للمشهد " + (index + 1));
+    visual.addEventListener("input", () => { scene.visual = visual.value; scheduleSave(); });
+
+    const assetWrap = document.createElement("label");
+    assetWrap.className = "scene-asset-wrap";
+    const assetLabel = document.createElement("span");
+    assetLabel.textContent = "مسار الصورة داخل jobs/assets/";
+    const asset = document.createElement("input");
+    asset.className = "scene-asset";
+    asset.type = "text";
+    asset.maxLength = 180;
+    asset.value = scene.image_file;
+    asset.placeholder = "assets/scene-01.webp";
+    asset.dir = "ltr";
+    asset.setAttribute("aria-label", "مسار صورة المشهد " + (index + 1));
+    asset.addEventListener("input", () => { scene.image_file = asset.value.trim(); updatePreview(); scheduleSave(); });
+    assetWrap.append(assetLabel, asset);
 
     const meta = document.createElement("div");
     meta.className = "scene-meta";
     const label = document.createElement("span");
-    label.textContent = "DURATION / SEC";
-    meta.append(label);
-    content.append(title, narration, meta);
+    label.textContent = "CAMERA MOVE";
+    const camera = document.createElement("select");
+    camera.className = "scene-camera";
+    camera.setAttribute("aria-label", "حركة الكاميرا");
+    [
+      ["push_in","اقتراب بطيء"],["pull_out","ابتعاد"],["pan_left","تحريك لليسار"],
+      ["pan_right","تحريك لليمين"],["pan_up","تحريك للأعلى"],["pan_down","تحريك للأسفل"],["static","ثابتة"]
+    ].forEach(([value,text]) => {
+      const option = document.createElement("option");
+      option.value = value; option.textContent = text;
+      camera.append(option);
+    });
+    camera.value = scene.camera_move;
+    camera.addEventListener("change", () => { scene.camera_move = camera.value; scheduleSave(); });
+    meta.append(label, camera);
+    content.append(title, narration, visual, assetWrap, meta);
 
     const tools = document.createElement("div");
     tools.className = "scene-tools";
-    const up = document.createElement("button");
-    up.className = "tiny-button";
-    up.type = "button";
-    up.textContent = "↑";
-    up.title = "تحريك للأعلى";
-    up.disabled = index === 0;
-    up.addEventListener("click", (event) => { event.stopPropagation(); moveScene(index, -1); });
-    const down = document.createElement("button");
-    down.className = "tiny-button";
-    down.type = "button";
-    down.textContent = "↓";
-    down.title = "تحريك للأسفل";
-    down.disabled = index === scenes.length - 1;
-    down.addEventListener("click", (event) => { event.stopPropagation(); moveScene(index, 1); });
-    const remove = document.createElement("button");
-    remove.className = "tiny-button";
-    remove.type = "button";
-    remove.textContent = "×";
-    remove.title = "حذف المشهد";
-    remove.addEventListener("click", (event) => { event.stopPropagation(); deleteScene(index); });
-    tools.append(up, down, remove);
+    const makeTool = (text, titleText, disabled, handler) => {
+      const button = document.createElement("button");
+      button.className = "tiny-button";
+      button.type = "button";
+      button.textContent = text;
+      button.title = titleText;
+      button.disabled = disabled;
+      button.addEventListener("click", (event) => { event.stopPropagation(); handler(); });
+      return button;
+    };
+    tools.append(
+      makeTool("↑","تحريك للأعلى",index===0,()=>moveScene(index,-1)),
+      makeTool("↓","تحريك للأسفل",index===scenes.length-1,()=>moveScene(index,1)),
+      makeTool("×","حذف المشهد",false,()=>deleteScene(index))
+    );
 
     const duration = document.createElement("input");
     duration.className = "duration-input";
-    duration.type = "number";
-    duration.min = "3";
-    duration.max = "90";
+    duration.type = "number"; duration.min = "3"; duration.max = "90";
     duration.value = String(scene.seconds);
     duration.setAttribute("aria-label", "مدة المشهد بالثواني");
     duration.addEventListener("change", () => {
       scene.seconds = Math.max(3, Math.min(90, Number(duration.value) || 3));
       duration.value = String(scene.seconds);
-      renderTimeline();
-      scheduleSave();
+      renderTimeline(); scheduleSave();
     });
     const right = document.createElement("div");
+    right.className = "scene-side";
     right.append(duration, tools);
     card.append(number, content, right);
     card.addEventListener("click", () => { selectedScene = index; renderSceneSelection(); });
@@ -207,7 +248,7 @@
   }
 
   function addScene() {
-    scenes.push({id: Date.now(), title:"مشهد جديد", narration:"اكتب الرسالة التي تريد إيصالها في هذا المشهد.", visual:"حدد العنصر الرئيسي والحركة والإضاءة والإحساس البصري.", seconds:10});
+    scenes.push({id: Date.now(), title:"مشهد جديد", narration:"اكتب الرسالة التي تريد إيصالها في هذا المشهد.", visual:"حدد العنصر الرئيسي والحركة والإضاءة والإحساس البصري.", image_file:"", camera_move:"push_in", seconds:10});
     selectedScene = scenes.length - 1;
     renderAll();
     scheduleSave();
@@ -219,6 +260,9 @@
     $("previewMeta").textContent = "SCENE " + String(selectedScene + 1).padStart(2,"0") + " / " + String(scenes.length).padStart(2,"0");
     $("previewTime").textContent = timecode(scene.seconds);
     $("previewTitle").textContent = scene.title;
+    $("previewAsset").textContent = scene.image_file
+      ? "ASSET: jobs/" + scene.image_file + " · " + scene.camera_move
+      : "لا توجد صورة مرفقة؛ سيستخدم المحرك خلفية تصميمية لهذا المشهد.";
     drawCanvas(scene, selectedScene);
   }
 
@@ -266,6 +310,8 @@
       title: String(scene.title || "مشهد " + (index+1)).slice(0,100),
       narration: String(scene.narration || "").slice(0,700),
       visual: String(scene.visual || "").slice(0,500),
+      image_file: String(scene.image_file || "").trim() || null,
+      camera_move: scene.camera_move || "push_in",
       seconds: Math.max(3, Math.min(90, Number(scene.seconds) || 3))
     }));
     const total = safeScenes.reduce((sum, scene) => sum + scene.seconds, 0);
@@ -279,6 +325,9 @@
       aspect: brief.aspect,
       fps: 24,
       resolution: "1080p",
+      voiceover_file: brief.voiceover_file || null,
+      music_file: brief.music_file || null,
+      music_volume: brief.music_volume,
       scenes: safeScenes
     };
   }
@@ -294,6 +343,10 @@
       document.body.append(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(url);
       setSavedState("تم تنزيل JSON");
     } catch (error) { alert(error.message); }
+  }
+
+  function updateMusicVolumeLabel() {
+    $("musicVolumeValue").textContent = Math.round(Number($("musicVolume").value) * 100) + "%";
   }
 
   function scheduleSave() {
@@ -321,6 +374,10 @@
       $("style").value = form.style || "cinematic";
       $("aspect").value = form.aspect || "16:9";
       $("targetDuration").value = String(form.target_duration || 60);
+      $("voiceoverFile").value = form.voiceover_file || "";
+      $("musicFile").value = form.music_file || "";
+      $("musicVolume").value = String(form.music_volume ?? 0.18);
+      updateMusicVolumeLabel();
       scenes = Array.isArray(stored.scenes) ? stored.scenes.slice(0,40) : [];
       selectedScene = Math.max(0,Math.min(Number(stored.selectedScene)||0,scenes.length-1));
       return scenes.length > 0;
@@ -340,7 +397,8 @@
   $("printButton").addEventListener("click", () => window.print());
   $("helpButton").addEventListener("click", () => $("helpDialog").showModal());
   $("closeHelp").addEventListener("click", () => $("helpDialog").close());
-  ["projectTitle","projectIdea","language","style","aspect","targetDuration"].forEach(id => {
+  $("musicVolume").addEventListener("input", () => { updateMusicVolumeLabel(); scheduleSave(); });
+  ["projectTitle","projectIdea","language","style","aspect","targetDuration","voiceoverFile","musicFile"].forEach(id => {
     $(id).addEventListener("input", () => { updatePreview(); scheduleSave(); });
     $(id).addEventListener("change", () => { updatePreview(); scheduleSave(); });
   });
