@@ -3,6 +3,9 @@
 
   const $ = (id) => document.getElementById(id);
   const STORAGE_KEY = "cineforge-studio-project-v1";
+  const storyPlanImporter = window.CineForgeStoryPlanImporter;
+  if (!storyPlanImporter) throw new Error("CineForge Story Plan importer failed to load.");
+  let importedStoryPlan = null;
   const palette = {
     cinematic: ["#092039", "#17465a", "#b8f3d3"],
     documentary: ["#172438", "#38516a", "#d9c49b"],
@@ -51,6 +54,30 @@
     };
   }
 
+  function importStoryPlanDocument(raw) {
+    const imported = storyPlanImporter.convert(raw);
+    $("projectTitle").value = imported.title;
+    $("projectIdea").value = imported.idea;
+    const format = imported.storyContext.format;
+    const style = /وثائقي|documentary/i.test(format) ? "documentary"
+      : /تعليمي|educational/i.test(format) ? "educational"
+      : /إعلاني|promo|advert/i.test(format) ? "promo" : "cinematic";
+    $("style").value = style;
+    const allowedDurations = [30, 60, 90, 180, 300];
+    const closestDuration = allowedDurations.reduce((best, value) =>
+      Math.abs(value - imported.targetSeconds) < Math.abs(best - imported.targetSeconds) ? value : best
+    , allowedDurations[0]);
+    $("targetDuration").value = String(closestDuration);
+    scenes = imported.scenes;
+    importedStoryPlan = imported.storyContext;
+    selectedScene = 0;
+    updateMusicVolumeLabel();
+    renderAll();
+    updatePreview();
+    scheduleSave();
+    setSavedState("تم استيراد خطة القصة");
+  }
+
   function makeOutline() {
     const brief = readForm();
     if (!brief.idea) {
@@ -60,6 +87,7 @@
       $("projectIdea").setCustomValidity("");
       return;
     }
+    importedStoryPlan = null;
     const target = brief.target_duration;
     const count = target <= 30 ? 3 : target <= 90 ? 5 : target <= 180 ? 7 : 9;
     const seconds = Math.max(3, Math.round(target / count));
@@ -328,6 +356,11 @@
       voiceover_file: brief.voiceover_file || null,
       music_file: brief.music_file || null,
       music_volume: brief.music_volume,
+      story_context: importedStoryPlan ? {
+        ...importedStoryPlan,
+        import_contract: "cineforge.story-plan@2",
+        note: "Planning snapshot imported into the renderer workspace. Rendered visuals use the scene fields above."
+      } : null,
       scenes: safeScenes
     };
   }
@@ -354,7 +387,7 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        const state = {form:readForm(), scenes, selectedScene};
+        const state = {form:readForm(), scenes, selectedScene, storyPlan:importedStoryPlan};
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         $("saveState").textContent = "محفوظ محلياً";
       } catch { $("saveState").textContent = "تعذّر الحفظ المحلي"; }
@@ -379,6 +412,7 @@
       $("musicVolume").value = String(form.music_volume ?? 0.18);
       updateMusicVolumeLabel();
       scenes = Array.isArray(stored.scenes) ? stored.scenes.slice(0,40) : [];
+      importedStoryPlan = stored.storyPlan && typeof stored.storyPlan === "object" ? stored.storyPlan : null;
       selectedScene = Math.max(0,Math.min(Number(stored.selectedScene)||0,scenes.length-1));
       return scenes.length > 0;
     } catch { return false; }
@@ -392,6 +426,20 @@
   }
 
   $("generateButton").addEventListener("click", makeOutline);
+  $("importStoryButton").addEventListener("click", () => $("storyPlanFile").click());
+  $("storyPlanFile").addEventListener("change", async () => {
+    const file = $("storyPlanFile").files && $("storyPlanFile").files[0];
+    if (!file) return;
+    try {
+      if (file.size > 1024 * 1024) throw new Error("حجم ملف خطة القصة أكبر من 1 ميغابايت.");
+      const raw = JSON.parse(await file.text());
+      importStoryPlanDocument(raw);
+    } catch (error) {
+      alert("تعذّر استيراد خطة القصة: " + (error && error.message ? error.message : "ملف غير صالح."));
+    } finally {
+      $("storyPlanFile").value = "";
+    }
+  });
   $("addSceneButton").addEventListener("click", addScene);
   $("downloadButton").addEventListener("click", downloadJob);
   $("printButton").addEventListener("click", () => window.print());
