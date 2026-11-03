@@ -5,7 +5,7 @@
 **Latest repository head at this snapshot:** `c1b1bc0a6469c45a6d0cc77b712e36c4d90bd3f6`  
 **Latest code/test head:** `26f95b2cd12e225f1f5cb08f307d245b310d37ef`  
 **Render service:** `srv-dbl0am942hec73dgt93g` — [live site](https://cineforge-studio-b92r.onrender.com/)  
-**Latest Render deploy:** `dep-dbl2daatnucc73frqi80` — live on `c1b1bc0`  
+**Latest Render deploy:** `dep-dbl2ro99dmos739uimqg` — live on `2afe08b`  
 **Phase PR:** [#12](https://github.com/mdznap35/PlayGround/pull/12), open Draft, base `feat/cineforge-studio-core`; not merged.
 
 ## Product goal
@@ -78,7 +78,8 @@ Files changed on the active branch:
 
 ## Remaining work
 1. Complete a visual and interaction smoke test on Android: export planner JSON, import it, edit a scene, reload, and verify the exported job retains the story snapshot.
-2. Surface narrative roles, scene purpose and continuity details in the main scene editor; consider splitting a long narrative beat into multiple shots automatically.
+2. Show narrative roles, scene purpose and continuity details directly in scene cards; consider splitting a long narrative beat into multiple shots automatically.
+3. Complete browser-level round-trip tests (planner export → editor import → edit → autosave/reload → job export) and a real Android browser smoke test with screenshots. These remain unverified.
 3. Build the media bin and source/rights manifest (Issue #14).
 4. Add Arabic SRT/VTT editing, audio timing and sound QA (Issue #15).
 5. Add multi-track timeline, transitions and overlays (Issue #16).
@@ -92,10 +93,13 @@ Files changed on the active branch:
 - No private footage, personal voice recordings or secrets in this public repository.
 - Render static hosting and GitHub Actions have free-tier limits; no unlimited free generation or processing is promised.
 - The current renderer composes supplied stills/audio and designed motion graphics; it does not claim to generate photorealistic video from text.
+- Active engine inventory: Pillow for image composition; FFmpeg for motion/video/audio assembly; FFprobe for export inspection; GitHub Actions hosted CPU runner for render execution. No third-party generative video/image, TTS or ASR provider is integrated yet.
+- The new narration-fit analyzer is a non-blocking heuristic using reference rates of 130 Arabic, 150 English and 140 mixed words/minute. It does not measure an actual recording, and its warnings do not block export.
 
 Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 
 ## Latest follow-up change
 - Commit `0d6bf2cea659965dd80c5ffb0e2ec077799cf166`: fixed story-plan import so the editor preserves the exact imported runtime instead of silently rounding it to the nearest preset (30/60/90/180/300 seconds). A custom imported duration is now represented as a selectable imported option.
 - This change requires the newly triggered exact-head CI run to pass before it is considered verified.
-- Next implementation task: browser-level round-trip tests and a per-scene narration-fit indicator, tracked in Issue #13.
+- Workflow #19 [passed](https://github.com/mdznap35/PlayGround/actions/runs/41694033138) for the exact-runtime import fix: JS syntax, importer tests, Python renderer tests, MP4 render, FFprobe inspection and artifact upload all succeeded.
+- Per-scene narration-fit analyzer and editor integration were added in commits `2842e14`, `68547f1`, `e94b0b7`, and `8be0553`, with seven Node tests. Workflow #23 is running against the implementation batch: [run #23](https://github.com/mdznap35/PlayGround/actions/runs/41698307092). Do not count this batch as verified until this run passes.
