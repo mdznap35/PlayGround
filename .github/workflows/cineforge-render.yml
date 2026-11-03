@@ -10,6 +10,12 @@ on:
       - "apps/cineforge-studio/jobs/*.json"
       - "apps/cineforge-studio/jobs/**/*.json"
       - "apps/cineforge-studio/render.py"
+      - "apps/cineforge-studio/app.js"
+      - "apps/cineforge-studio/index.html"
+      - "apps/cineforge-studio/styles.css"
+      - "apps/cineforge-studio/story-plan-import.js"
+      - "apps/cineforge-studio/story-planner.html"
+      - "apps/cineforge-studio/story-planner.css"
       - "apps/cineforge-studio/story-planner.*"
       - "apps/cineforge-studio/tests/**"
       - ".github/workflows/cineforge-render.yml"
@@ -58,8 +64,12 @@ jobs:
         run: |
           node --check apps/cineforge-studio/app.js
           node --check apps/cineforge-studio/story-planner.js
+          node --check apps/cineforge-studio/story-plan-import.js
 
-      - name: Run validation tests
+      - name: Test story-plan importer
+        run: node --test apps/cineforge-studio/tests/*.test.cjs
+
+      - name: Run renderer validation tests
         run: python -m unittest discover -s apps/cineforge-studio/tests -v
 
       - name: Resolve job file
