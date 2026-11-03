@@ -23,3 +23,6 @@
 .range-field input{flex:1;min-width:0;accent-color:#b8f3d3;padding:0;border:0;background:transparent;box-shadow:none}
 .range-field output{font:600 10px var(--latin);color:var(--accent);min-width:34px;text-align:left}
 @media(max-width:680px){.scene-card{grid-template-columns:25px minmax(0,1fr) 52px;gap:7px}.scene-camera{max-width:100%;width:100%}.scene-meta{align-items:stretch}.scene-meta span{width:100%}}
+
+/* Story-plan import: phone-first wrapping and clear secondary action. */
+.panel-footer{flex-wrap:wrap;row-gap:12px}.panel-footer .secondary-button{min-height:42px;font-size:10px}.panel-footer .micro-note{flex:1 1 100%}@media(min-width:760px){.panel-footer .micro-note{flex:1 1 auto}.panel-footer{justify-content:space-between}}@media(max-width:520px){.panel-footer{align-items:stretch}.panel-footer .primary-button,.panel-footer .secondary-button{flex:1 1 100%}}
