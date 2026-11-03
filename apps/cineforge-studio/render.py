@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CineForge CPU renderer with optional stills and audio tracks."""
 from __future__ import annotations
-import argparse, json, shutil, subprocess, sys, tempfile
+import argparse, json, math, shutil, subprocess, sys, tempfile
 from pathlib import Path, PurePosixPath
 from typing import Any
 from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageOps, features
