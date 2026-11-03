@@ -54,6 +54,22 @@
     };
   }
 
+  function setExactTargetDuration(seconds) {
+    const select = $("targetDuration");
+    const exact = String(Math.round(Number(seconds)));
+    let option = [...select.options].find(item => item.value === exact);
+    if (!option) {
+      option = document.createElement("option");
+      option.value = exact;
+      option.textContent = Math.floor(Number(seconds) / 60) > 0
+        ? Math.floor(Number(seconds) / 60) + " د " + (Number(seconds) % 60) + " ث — مستورد"
+        : exact + " ثانية — مستورد";
+      option.dataset.imported = "true";
+      select.add(option);
+    }
+    select.value = exact;
+  }
+
   function importStoryPlanDocument(raw) {
     const imported = storyPlanImporter.convert(raw);
     $("projectTitle").value = imported.title;
@@ -63,11 +79,7 @@
       : /تعليمي|educational/i.test(format) ? "educational"
       : /إعلاني|promo|advert/i.test(format) ? "promo" : "cinematic";
     $("style").value = style;
-    const allowedDurations = [30, 60, 90, 180, 300];
-    const closestDuration = allowedDurations.reduce((best, value) =>
-      Math.abs(value - imported.targetSeconds) < Math.abs(best - imported.targetSeconds) ? value : best
-    , allowedDurations[0]);
-    $("targetDuration").value = String(closestDuration);
+    setExactTargetDuration(imported.targetSeconds);
     scenes = imported.scenes;
     importedStoryPlan = imported.storyContext;
     selectedScene = 0;
