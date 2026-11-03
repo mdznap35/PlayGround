@@ -17,6 +17,10 @@ CineForge is a mobile-friendly, Arabic-first storyboard studio with a small, rep
 - Scene camera moves: static, push-in, pull-out, pan left/right/up/down.
 - Separate voiceover and music tracks from jobs/audio/, with independent volume controls.
 - Machine-readable FFprobe report in every rendered artifact.
+- Five-part narrative arc, audience/platform/tone brief and continuity bible.
+- Per-shot purpose, subject/action, framing, lighting, on-screen text, sound cue, transition and continuity note.
+- Approximate narration-duration analysis with warnings for overfull and underfilled scenes.
+- Project schema v2 metadata is additive and retains the renderer's schema-v1 contract.
 
 ## What it does not claim to do
 

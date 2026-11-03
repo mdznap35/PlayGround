@@ -3,6 +3,10 @@
 
   const $ = (id) => document.getElementById(id);
   const STORAGE_KEY = "cineforge-studio-project-v1";
+  const planner = window.CineForgeStoryPlanner;
+  if (!planner) throw new Error("CineForge Story Planner failed to load.");
+  let storyArc = planner.createStoryArc({idea: $("projectIdea").value});
+  let continuity = {subject:"",location:"",props:"",visual_language:"cinematic"};
   const palette = {
     cinematic: ["#092039", "#17465a", "#b8f3d3"],
     documentary: ["#172438", "#38516a", "#d9c49b"],
@@ -45,10 +49,50 @@
       style: $("style").value,
       aspect: $("aspect").value,
       target_duration: Number($("targetDuration").value),
+      audience: $("audience").value.trim(),
+      platform: $("platform").value,
+      tone: $("tone").value.trim(),
       voiceover_file: $("voiceoverFile").value.trim(),
       music_file: $("musicFile").value.trim(),
       music_volume: Number($("musicVolume").value)
     };
+  }
+
+  function readStoryArcForm() {
+    return {
+      hook: $("arcHook").value.trim(),
+      setup: $("arcSetup").value.trim(),
+      development: $("arcDevelopment").value.trim(),
+      turning_point: $("arcTurning").value.trim(),
+      resolution: $("arcResolution").value.trim()
+    };
+  }
+
+  function writeStoryArcForm(value) {
+    const next = Object.assign(planner.createStoryArc(readForm()), value || {});
+    $("arcHook").value = next.hook || "";
+    $("arcSetup").value = next.setup || "";
+    $("arcDevelopment").value = next.development || "";
+    $("arcTurning").value = next.turning_point || "";
+    $("arcResolution").value = next.resolution || "";
+    storyArc = next;
+  }
+
+  function readContinuityForm() {
+    return {
+      subject: $("continuitySubject").value.trim(),
+      location: $("continuityLocation").value.trim(),
+      props: $("continuityProps").value.trim(),
+      visual_language: $("continuityStyle").value.trim()
+    };
+  }
+
+  function writeContinuityForm(value) {
+    continuity = Object.assign({subject:"",location:"",props:"",visual_language:$("style").value}, value || {});
+    $("continuitySubject").value = continuity.subject || "";
+    $("continuityLocation").value = continuity.location || "";
+    $("continuityProps").value = continuity.props || "";
+    $("continuityStyle").value = continuity.visual_language || $("style").value;
   }
 
   function makeOutline() {
@@ -63,17 +107,21 @@
     const target = brief.target_duration;
     const count = target <= 30 ? 3 : target <= 90 ? 5 : target <= 180 ? 7 : 9;
     const seconds = Math.max(3, Math.round(target / count));
+    storyArc = planner.createStoryArc(brief);
+    writeStoryArcForm(storyArc);
+    if (!continuity.visual_language) writeContinuityForm({visual_language:brief.style});
     scenes = [];
     for (let i = 0; i < count; i++) {
       const base = templates[i % templates.length];
+      const plan = planner.createScenePlan(i, count, brief);
       scenes.push({
         id: Date.now() + i,
-        title: i === 0 ? base.title : (i === count - 1 ? "الخاتمة: الفكرة التي تبقى" : base.title),
+        title: plan.role_label + ": " + base.title,
         narration: i === 0 ? base.narration.replace("ابدأ بسؤال", "انطلق من الفكرة") : base.narration,
         visual: base.visual,
         image_file: "",
-        camera_move: i % 3 === 0 ? "push_in" : (i % 3 === 1 ? "pan_left" : "pan_right"),
-        seconds
+        seconds,
+        ...plan
       });
     }
     const remainder = target - scenes.reduce((sum, scene) => sum + scene.seconds, 0);
@@ -106,76 +154,142 @@
 
     const content = document.createElement("div");
     content.className = "scene-content";
-    const title = document.createElement("input");
-    title.className = "scene-title";
-    title.value = scene.title;
-    title.maxLength = 100;
+
+    const makeInput = (value, className, placeholder, maxLength, handler) => {
+      const el = document.createElement("input");
+      el.className = className;
+      el.value = value || "";
+      el.placeholder = placeholder || "";
+      el.maxLength = maxLength || 180;
+      el.addEventListener("input", () => { handler(el.value); scheduleSave(); });
+      return el;
+    };
+    const makeTextarea = (value, className, placeholder, maxLength, handler) => {
+      const el = document.createElement("textarea");
+      el.className = className;
+      el.value = value || "";
+      el.placeholder = placeholder || "";
+      el.maxLength = maxLength || 500;
+      el.rows = 2;
+      el.addEventListener("input", () => { handler(el.value); scheduleSave(); });
+      return el;
+    };
+    const makeSelect = (value, className, options, handler) => {
+      const el = document.createElement("select");
+      el.className = className;
+      options.forEach(([key,label]) => {
+        const option = document.createElement("option");
+        option.value = key; option.textContent = label;
+        el.append(option);
+      });
+      el.value = value || options[0][0];
+      el.addEventListener("change", () => { handler(el.value); scheduleSave(); });
+      return el;
+    };
+
+    const title = makeInput(scene.title, "scene-title", "عنوان المشهد", 100, value => { scene.title = value; updatePreview(); });
     title.setAttribute("aria-label", "عنوان المشهد " + (index + 1));
-    title.addEventListener("input", () => { scene.title = title.value; updatePreview(); scheduleSave(); });
 
-    const narration = document.createElement("textarea");
-    narration.className = "scene-description";
-    narration.value = scene.narration;
-    narration.maxLength = 700;
-    narration.rows = 2;
-    narration.placeholder = "نص التعليق أو الجملة التي تظهر للمشاهد";
-    narration.setAttribute("aria-label", "نص المشهد " + (index + 1));
-    narration.addEventListener("input", () => { scene.narration = narration.value; scheduleSave(); });
+    const role = makeSelect(scene.narrative_role, "scene-role", [
+      ["hook","الخطاف"],["setup","التمهيد"],["development","التطوير"],
+      ["turning_point","نقطة التحول"],["resolution","الخاتمة"]
+    ], value => { scene.narrative_role = value; });
+    role.setAttribute("aria-label", "الدور السردي للمشهد");
 
-    const visual = document.createElement("textarea");
-    visual.className = "scene-visual";
-    visual.value = scene.visual;
-    visual.maxLength = 500;
-    visual.rows = 2;
-    visual.placeholder = "وصف اللقطة: الموضوع، الفعل، الإضاءة، التكوين...";
-    visual.setAttribute("aria-label", "الوصف البصري للمشهد " + (index + 1));
-    visual.addEventListener("input", () => { scene.visual = visual.value; scheduleSave(); });
+    const purpose = makeTextarea(scene.purpose, "scene-purpose", "لماذا يوجد هذا المشهد؟ ما الذي يجب أن يفهمه المشاهد؟", 500, value => { scene.purpose = value; });
+    const narration = makeTextarea(scene.narration, "scene-description", "نص التعليق الصوتي أو الجملة التي تظهر للمشاهد", 700, value => {
+      scene.narration = value;
+      updateSceneTiming(timing, scene);
+      updateTimingSummary();
+    });
+    narration.setAttribute("aria-label", "نص التعليق للمشهد " + (index + 1));
+
+    const timing = document.createElement("span");
+    timing.className = "scene-timing";
+    updateSceneTiming(timing, scene);
+
+    const subject = makeTextarea(scene.subject_action, "scene-shot-detail", "الموضوع والفعل: من أو ما الذي نراه؟ وماذا يحدث؟", 500, value => { scene.subject_action = value; });
+    const visual = makeTextarea(scene.visual, "scene-visual", "التكوين البصري: العدسة، الحركة، البيئة، الخلفية...", 500, value => { scene.visual = value; });
+
+    const frameLabel = document.createElement("label");
+    frameLabel.className = "scene-inline-field";
+    const frameCaption = document.createElement("span");
+    frameCaption.textContent = "حجم / زاوية اللقطة";
+    const framing = makeSelect(scene.framing, "scene-framing", [
+      ["establishing","تأسيسية"],["wide","واسعة"],["medium","متوسطة"],["close_up","قريبة"],
+      ["detail","تفصيلية"],["over_shoulder","فوق الكتف"],["pov","من منظور العنصر"],["aerial","علوية"]
+    ], value => { scene.framing = value; });
+    frameLabel.append(frameCaption, framing);
+
+    const lightingLabel = document.createElement("label");
+    lightingLabel.className = "scene-inline-field";
+    const lightingCaption = document.createElement("span");
+    lightingCaption.textContent = "الإضاءة";
+    const lighting = makeInput(scene.lighting, "scene-lighting", "مثلاً: ضوء جانبي ناعم، ضباب خفيف...", 180, value => { scene.lighting = value; });
+    lightingLabel.append(lightingCaption, lighting);
+
+    const overlayLabel = document.createElement("label");
+    overlayLabel.className = "scene-inline-field";
+    const overlayCaption = document.createElement("span");
+    overlayCaption.textContent = "النص الظاهر على الشاشة";
+    const overlay = makeInput(scene.on_screen_text, "scene-overlay-text", "عنوان أو معلومة قصيرة — اتركه فارغاً إن لم يلزم", 180, value => { scene.on_screen_text = value; });
+    overlayLabel.append(overlayCaption, overlay);
+
+    const soundLabel = document.createElement("label");
+    soundLabel.className = "scene-inline-field";
+    const soundCaption = document.createElement("span");
+    soundCaption.textContent = "إشارة صوتية";
+    const sound = makeInput(scene.sound_cue, "scene-sound-cue", "موسيقى، جوّ، انتقال صوتي، أو صمت مقصود...", 180, value => { scene.sound_cue = value; });
+    soundLabel.append(soundCaption, sound);
+
+    const transitionLabel = document.createElement("label");
+    transitionLabel.className = "scene-inline-field";
+    const transitionCaption = document.createElement("span");
+    transitionCaption.textContent = "الانتقال";
+    const transition = makeSelect(scene.transition, "scene-transition", [
+      ["cut","قطع مباشر"],["fade_in","تلاشي دخول"],["fade_out","تلاشي خروج"],
+      ["dissolve","مزج ناعم"],["match_cut","قطع تطابقي"]
+    ], value => { scene.transition = value; });
+    transitionLabel.append(transitionCaption, transition);
+
+    const continuity = makeTextarea(scene.continuity_note, "scene-continuity", "ملاحظات استمرارية خاصة بهذه اللقطة...", 350, value => { scene.continuity_note = value; });
 
     const assetWrap = document.createElement("label");
     assetWrap.className = "scene-asset-wrap";
     const assetLabel = document.createElement("span");
     assetLabel.textContent = "مسار الصورة داخل jobs/assets/";
-    const asset = document.createElement("input");
-    asset.className = "scene-asset";
-    asset.type = "text";
-    asset.maxLength = 180;
-    asset.value = scene.image_file;
-    asset.placeholder = "assets/scene-01.webp";
+    const asset = makeInput(scene.image_file, "scene-asset", "assets/scene-01.webp", 180, value => { scene.image_file = value.trim(); updatePreview(); });
     asset.dir = "ltr";
-    asset.setAttribute("aria-label", "مسار صورة المشهد " + (index + 1));
-    asset.addEventListener("input", () => { scene.image_file = asset.value.trim(); updatePreview(); scheduleSave(); });
     assetWrap.append(assetLabel, asset);
 
-    const meta = document.createElement("div");
-    meta.className = "scene-meta";
-    const label = document.createElement("span");
-    label.textContent = "CAMERA MOVE";
-    const camera = document.createElement("select");
-    camera.className = "scene-camera";
-    camera.setAttribute("aria-label", "حركة الكاميرا");
-    [
+    const cameraWrap = document.createElement("div");
+    cameraWrap.className = "scene-meta";
+    const cameraLabel = document.createElement("span");
+    cameraLabel.textContent = "CAMERA MOVE";
+    const camera = makeSelect(scene.camera_move, "scene-camera", [
       ["push_in","اقتراب بطيء"],["pull_out","ابتعاد"],["pan_left","تحريك لليسار"],
       ["pan_right","تحريك لليمين"],["pan_up","تحريك للأعلى"],["pan_down","تحريك للأسفل"],["static","ثابتة"]
-    ].forEach(([value,text]) => {
-      const option = document.createElement("option");
-      option.value = value; option.textContent = text;
-      camera.append(option);
-    });
-    camera.value = scene.camera_move;
-    camera.addEventListener("change", () => { scene.camera_move = camera.value; scheduleSave(); });
-    meta.append(label, camera);
-    content.append(title, narration, visual, assetWrap, meta);
+    ], value => { scene.camera_move = value; updatePreview(); });
+    cameraWrap.append(cameraLabel, camera);
+
+    const details = document.createElement("details");
+    details.className = "scene-production-details";
+    const summary = document.createElement("summary");
+    summary.textContent = "تفاصيل الإخراج والاستمرارية";
+    const detailGrid = document.createElement("div");
+    detailGrid.className = "scene-detail-grid";
+    detailGrid.append(frameLabel, lightingLabel, overlayLabel, soundLabel, transitionLabel);
+    details.append(summary, detailGrid, continuity);
+
+    content.append(title, role, purpose, narration, timing, subject, visual, assetWrap, cameraWrap, details);
 
     const tools = document.createElement("div");
     tools.className = "scene-tools";
     const makeTool = (text, titleText, disabled, handler) => {
       const button = document.createElement("button");
-      button.className = "tiny-button";
-      button.type = "button";
-      button.textContent = text;
-      button.title = titleText;
-      button.disabled = disabled;
-      button.addEventListener("click", (event) => { event.stopPropagation(); handler(); });
+      button.className = "tiny-button"; button.type = "button"; button.textContent = text;
+      button.title = titleText; button.disabled = disabled;
+      button.addEventListener("click", event => { event.stopPropagation(); handler(); });
       return button;
     };
     tools.append(
@@ -185,14 +299,13 @@
     );
 
     const duration = document.createElement("input");
-    duration.className = "duration-input";
-    duration.type = "number"; duration.min = "3"; duration.max = "90";
-    duration.value = String(scene.seconds);
+    duration.className = "duration-input"; duration.type = "number";
+    duration.min = "3"; duration.max = "90"; duration.value = String(scene.seconds);
     duration.setAttribute("aria-label", "مدة المشهد بالثواني");
     duration.addEventListener("change", () => {
       scene.seconds = Math.max(3, Math.min(90, Number(duration.value) || 3));
       duration.value = String(scene.seconds);
-      renderTimeline(); scheduleSave();
+      updateSceneTiming(timing, scene); renderTimeline(); updateTimingSummary(); scheduleSave();
     });
     const right = document.createElement("div");
     right.className = "scene-side";
@@ -202,6 +315,25 @@
     return card;
   }
 
+  function updateSceneTiming(node, scene) {
+    const timing = planner.analyzeSceneTiming(scene);
+    node.textContent = "تقدير الإلقاء: " + timing.estimatedSeconds + " ث من " + timing.availableSeconds + " ث — " + timing.message;
+    node.dataset.status = timing.status;
+  }
+
+  function updateTimingSummary() {
+    const report = planner.analyzeProjectTiming(scenes);
+    const parts = [
+      "زمن الإلقاء التقريبي: " + report.estimatedVoiceSeconds + " ث",
+      "زمن المشاهد: " + report.sceneSeconds + " ث"
+    ];
+    if (report.over) parts.push(report.over + " مشهد أطول نصاً من مدته");
+    if (report.under) parts.push(report.under + " مشهد يحتاج مادة إضافية أو صمتاً مقصوداً");
+    if (report.empty) parts.push(report.empty + " مشهد بلا نص صوتي");
+    $("scriptTimingSummary").textContent = parts.join(" · ");
+    $("scriptTimingSummary").dataset.status = report.over ? "warning" : "normal";
+  }
+
   function renderAll() {
     const list = $("sceneList");
     list.replaceChildren(...scenes.map(createSceneCard));
@@ -209,6 +341,7 @@
     $("timelineCount").textContent = String(scenes.length).padStart(2, "0");
     renderTimeline();
     renderSceneSelection();
+    updateTimingSummary();
   }
 
   function renderSceneSelection() {
@@ -248,7 +381,8 @@
   }
 
   function addScene() {
-    scenes.push({id: Date.now(), title:"مشهد جديد", narration:"اكتب الرسالة التي تريد إيصالها في هذا المشهد.", visual:"حدد العنصر الرئيسي والحركة والإضاءة والإحساس البصري.", image_file:"", camera_move:"push_in", seconds:10});
+    const plan = planner.createScenePlan(Math.max(0, scenes.length - 1), Math.max(1, scenes.length + 1), readForm());
+    scenes.push({...plan, id:Date.now(), title:"مشهد جديد", narration:"اكتب الرسالة التي تريد إيصالها في هذا المشهد.", visual:"حدد العنصر الرئيسي والحركة والإضاءة والإحساس البصري.", image_file:"", seconds:10});
     selectedScene = scenes.length - 1;
     renderAll();
     scheduleSave();
@@ -305,21 +439,33 @@
     const brief = readForm();
     if (!brief.idea) throw new Error("أضف الفكرة الأساسية أولاً.");
     if (!scenes.length) throw new Error("أنشئ مخطط المشاهد أولاً.");
-    if (scenes.length > 40) throw new Error("الحد الأقصى 40 مشهداً.");
+    const story = readStoryArcForm();
+    const continuityData = readContinuityForm();
     const safeScenes = scenes.map((scene, index) => ({
+      ...scene,
       title: String(scene.title || "مشهد " + (index+1)).slice(0,100),
+      purpose: String(scene.purpose || "").slice(0,500),
       narration: String(scene.narration || "").slice(0,700),
       visual: String(scene.visual || "").slice(0,500),
+      subject_action: String(scene.subject_action || "").slice(0,500),
+      framing: scene.framing || "establishing",
+      lighting: String(scene.lighting || "").slice(0,180),
+      on_screen_text: String(scene.on_screen_text || "").slice(0,180),
+      sound_cue: String(scene.sound_cue || "").slice(0,180),
+      transition: scene.transition || "cut",
+      continuity_note: String(scene.continuity_note || "").slice(0,350),
       image_file: String(scene.image_file || "").trim() || null,
       camera_move: scene.camera_move || "push_in",
       seconds: Math.max(3, Math.min(90, Number(scene.seconds) || 3))
     }));
-    const total = safeScenes.reduce((sum, scene) => sum + scene.seconds, 0);
-    if (total > 900) throw new Error("مدة المشروع تتجاوز 15 دقيقة، قسّمه إلى جزأين.");
-    return {
+    return planner.validateProject({
+      project_schema_version: 2,
       schema_version: 1,
       title: brief.title.slice(0,90),
       idea: brief.idea.slice(0,500),
+      audience: brief.audience,
+      platform: brief.platform,
+      tone: brief.tone,
       language: brief.language,
       style: brief.style,
       aspect: brief.aspect,
@@ -328,8 +474,10 @@
       voiceover_file: brief.voiceover_file || null,
       music_file: brief.music_file || null,
       music_volume: brief.music_volume,
+      story_arc: story,
+      continuity: continuityData,
       scenes: safeScenes
-    };
+    });
   }
 
   function downloadJob() {
@@ -354,7 +502,7 @@
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        const state = {form:readForm(), scenes, selectedScene};
+        const state = {form:readForm(), story_arc:readStoryArcForm(), continuity:readContinuityForm(), scenes, selectedScene};
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
         $("saveState").textContent = "محفوظ محلياً";
       } catch { $("saveState").textContent = "تعذّر الحفظ المحلي"; }
@@ -374,11 +522,16 @@
       $("style").value = form.style || "cinematic";
       $("aspect").value = form.aspect || "16:9";
       $("targetDuration").value = String(form.target_duration || 60);
+      $("audience").value = form.audience || "المشاهد المهتم";
+      $("platform").value = form.platform || "youtube";
+      $("tone").value = form.tone || "وثائقي مشوّق وهادئ";
       $("voiceoverFile").value = form.voiceover_file || "";
       $("musicFile").value = form.music_file || "";
       $("musicVolume").value = String(form.music_volume ?? 0.18);
       updateMusicVolumeLabel();
       scenes = Array.isArray(stored.scenes) ? stored.scenes.slice(0,40) : [];
+      writeStoryArcForm(stored.story_arc);
+      writeContinuityForm(stored.continuity);
       selectedScene = Math.max(0,Math.min(Number(stored.selectedScene)||0,scenes.length-1));
       return scenes.length > 0;
     } catch { return false; }
@@ -398,7 +551,13 @@
   $("helpButton").addEventListener("click", () => $("helpDialog").showModal());
   $("closeHelp").addEventListener("click", () => $("helpDialog").close());
   $("musicVolume").addEventListener("input", () => { updateMusicVolumeLabel(); scheduleSave(); });
-  ["projectTitle","projectIdea","language","style","aspect","targetDuration","voiceoverFile","musicFile"].forEach(id => {
+  ["arcHook","arcSetup","arcDevelopment","arcTurning","arcResolution"].forEach(id => {
+    $(id).addEventListener("input", () => { storyArc = readStoryArcForm(); scheduleSave(); });
+  });
+  ["continuitySubject","continuityLocation","continuityProps","continuityStyle"].forEach(id => {
+    $(id).addEventListener("input", () => { continuity = readContinuityForm(); scheduleSave(); });
+  });
+  ["projectTitle","projectIdea","language","style","aspect","targetDuration","audience","platform","tone","voiceoverFile","musicFile"].forEach(id => {
     $(id).addEventListener("input", () => { updatePreview(); scheduleSave(); });
     $(id).addEventListener("change", () => { updatePreview(); scheduleSave(); });
   });
