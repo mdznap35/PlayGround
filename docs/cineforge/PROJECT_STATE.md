@@ -2,10 +2,10 @@
 
 **Updated:** 2026-11-03  
 **Active implementation branch:** `feat/cineforge-cinematic-media-v2`  
-**Latest repository head at this snapshot:** `6304b8091fa1b1d4d73ea86cacea5ff9c6507257`  
+**Latest repository head at this snapshot:** `6152f2831a819edb7c940f56e115aba08a52188a`  
 **Latest code/test head:** `8be0553d3d7d6a853e7e3893dfd2830002f5c1a5`  
 **Render service:** `srv-dbl0am942hec73dgt93g` — [live site](https://cineforge-studio-b92r.onrender.com/)  
-**Latest Render deploy:** `dep-dbl2se4s728c739dnsb0` — live on `6304b80`  
+**Latest Render deploy before this documentation refresh:** `dep-dbl2ugl9el5s73f93bgg` — live on `0b625c4`; newer documentation commits are triggering automatic static redeploys  
 **Phase PR:** [#12](https://github.com/mdznap35/PlayGround/pull/12), open Draft, base `feat/cineforge-studio-core`; not merged.
 
 ## Product goal
@@ -75,7 +75,7 @@ Files changed on the active branch:
 - Latest Render deploy `dep-dbl2se4s728c739dnsb0`: `live` on commit `6304b8091fa1b1d4d73ea86cacea5ff9c6507257`.
 - Main studio: https://cineforge-studio-b92r.onrender.com/
 - Story planner: https://cineforge-studio-b92r.onrender.com/story-planner.html
-- A separate browser-based visual/interaction smoke test has not yet been completed in this verification session; Render reports the latest static deployment as live, and CI verifies code syntax and importer logic.
+- A separate browser-based visual/interaction smoke test has not yet been completed in this verification session; Render deployment state confirms static hosting only, and CI verifies code syntax, unit tests and renderer output.
 
 ## Remaining work
 1. Complete browser-level round-trip verification (planner export → editor import → edit → autosave/reload → job export) and a visual Android browser smoke test with screenshots. These remain unverified.
@@ -95,14 +95,15 @@ Files changed on the active branch:
 - The current renderer composes supplied stills/audio and designed motion graphics; it does not claim to generate photorealistic video from text.
 - Active engine inventory: Pillow for image composition; FFmpeg for motion/video/audio assembly; FFprobe for export inspection; GitHub Actions hosted CPU runner for render execution. No third-party generative video/image, TTS or ASR provider is integrated yet.
 - The new narration-fit analyzer is a non-blocking heuristic using reference rates of 130 Arabic, 150 English and 140 mixed words/minute. It does not measure an actual recording, and its warnings do not block export.
+- Open-source integration evaluation is documented in `docs/cineforge/ENGINE_EVALUATION_AR.md`: Whisper.cpp is the first ASR candidate (tiny 75 MiB / base 142 MiB); Piper is a possible Arabic TTS candidate requiring GPL and voice-license review; ComfyUI is deferred until a genuine GPU/resource and licensing path exists. None is installed or downloaded.
 
 Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 
 ## Latest follow-up change
 - Commit `0d6bf2cea659965dd80c5ffb0e2ec077799cf166`: fixed story-plan import so the editor preserves the exact imported runtime instead of silently rounding it to the nearest preset (30/60/90/180/300 seconds). A custom imported duration is now represented as a selectable imported option.
-- This change requires the newly triggered exact-head CI run to pass before it is considered verified.
+- This exact-runtime change is verified by workflow #19 success; it no longer has a pending verification gate.
 - Workflow #19 [passed](https://github.com/mdznap35/PlayGround/actions/runs/41694033138) for the exact-runtime import fix: JS syntax, importer tests, Python renderer tests, MP4 render, FFprobe inspection and artifact upload all succeeded.
 - Per-scene narration-fit analyzer and editor integration were added in commits `2842e14`, `68547f1`, `e94b0b7`, and `8be0553`, with seven dedicated Node tests.
 - Workflow #23 [passed](https://github.com/mdznap35/PlayGround/actions/runs/41698307092): JavaScript syntax, all 14 Node tests, all 20 Python tests, sample MP4 render, FFprobe inspection and artifact upload succeeded.
-- Render deploy `dep-dbl2se4s728c739dnsb0` is `live` on repository documentation head `6304b80`. This confirms static deployment, not a manual Android interaction test.
+- The engine evaluation document was added in commit `0b625c4` and linked from the README and master roadmap. The README/roadmap updates are documentation-only. Render auto-deploys on every commit; current deploy status must be checked independently. A live static deploy never substitutes for the Android interaction smoke test.
 - The next increment is browser round-trip coverage and direct scene display of narrative role/purpose/continuity. The Android smoke test still requires a real device/browser interaction.
