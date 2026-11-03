@@ -19,6 +19,14 @@ CineForge is a mobile-friendly, Arabic-first storyboard studio with a small, rep
 - Separate voiceover and music tracks from jobs/audio/, with independent volume controls.
 - Machine-readable FFprobe report in every rendered artifact.
 
+## Active engine inventory
+
+- **Pillow:** creates scene artwork, gradients, typography and image composition.
+- **FFmpeg:** assembles animated scenes, camera moves, fades and audio into MP4.
+- **FFprobe:** inspects the exported file and supports the technical QA gate.
+- **GitHub Actions CPU runner:** executes the reproducible render job. Render hosts the static interface only.
+- **No generative AI video, image, speech or music provider is currently connected.** Optional provider adapters remain a later phase, not an installed engine.
+
 ## What it does not claim to do
 
 This CPU-first release does **not** generate realistic video clips from text, clone voices, or create music. It renders designed motion graphics from the scene content. A real generative video engine (for example a GPU-backed ComfyUI provider) is a future optional adapter. No model weights are downloaded by this project.
@@ -40,6 +48,10 @@ The studio is static. It does not need a Render backend, persistent disk, databa
 ## Plan a story
 
 Open `story-planner.html` from the studio navigation. Define the audience, goal, premise, format and tone; write the seven narrative beats; record characters, locations and props in the continuity bible; and track research sources with verification status. Paste narration to estimate word count and duration against the target runtime. Export a `cineforge.story-plan` JSON file. Return to the main editor and choose **استيراد خطة القصة JSON** to convert the beats into editable renderer scenes. The importer preserves a bounded planning snapshot in the exported render job. Current render constraints still apply: 3–90 seconds per scene and 15 minutes total. The planner autosaves only in the current browser's local storage; export the JSON to keep a portable copy.
+
+## Narration pacing guidance
+
+The scene editor shows a per-scene estimate based on word count, scene duration and a rough reference speaking rate (Arabic 130, English 150, mixed 140 words/minute). It flags empty text, visual breathing room, a tight fit and likely overrun. These are editorial estimates only: real delivery varies by speaker, pauses and performance, so they never block export.
 
 ## Roadmap and project status
 
