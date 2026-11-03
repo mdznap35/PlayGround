@@ -3,6 +3,7 @@
 CineForge is a mobile-friendly, Arabic-first storyboard studio with a small, reproducible video renderer. It is deliberately split into two parts:
 
 - **Studio (browser):** edits projects locally in the browser, builds editable scene outlines, previews title cards, and exports a small JSON job file. No account, API key, or model download is required.
+- **Story planner:** a separate Arabic-first planning workspace for narrative beats, continuity bible, research ledger, and narration pacing audit. It exports a versioned story-plan JSON.
 - **Renderer (GitHub Actions):** converts a committed job JSON into an MP4 using Pillow + FFmpeg on a standard CPU runner. It produces animated motion-graphics scenes (slow camera movement, cinematic cards, fades), not photorealistic AI-generated footage.
 
 ## What this first release can do
@@ -35,6 +36,10 @@ Open `index.html` in a browser, or deploy this folder as a Render Static Site:
 The studio is static. It does not need a Render backend, persistent disk, database, or always-on server. Render's free static hosting is suitable for the interface; video rendering happens separately in GitHub Actions.
 
 **Simplest deployment:** in Render, choose **New → Blueprint**, connect this repository, and select branch `feat/cineforge-cinematic-media-v2`. The root `render.yaml` defines the free static site, app root, and publish path. Render will show the service details before creation.
+
+## Plan a story
+
+Open `story-planner.html` from the studio navigation. Define the audience, goal, premise, format and tone; write the seven narrative beats; record characters, locations and props in the continuity bible; and track research sources with verification status. Paste narration to estimate word count and duration against the target runtime. Export a `cineforge.story-plan` JSON file. The planner autosaves only in the current browser's local storage; export the JSON to keep a portable copy.
 
 ## Render a video
 
@@ -82,9 +87,10 @@ The browser autosaves to that browser's local storage. Exported project JSON con
 ## Roadmap
 
 1. Verified CPU renderer and project manifest.
-2. Narration/audio timing and subtitle controls.
-3. Optional image/video assets per scene.
-4. Pluggable GPU generation providers, enabled only when a suitable free or paid GPU is explicitly available.
-5. Batch jobs, reusable visual themes, and advanced transitions.
+2. Structured story planner, continuity bible, research ledger, and narration pacing audit.
+3. Deeper integration: convert approved story-plan beats into scene drafts and timeline timings.
+4. Subtitle authoring, word-level timing, and caption QA.
+5. Optional GPU generation adapters only after verified availability, licensing, and cost review.
+6. Batch jobs, reusable visual themes, and advanced transitions.
 
 **Principle:** never label a motion-graphics render as generative AI footage. Show exactly which engine made the output.
