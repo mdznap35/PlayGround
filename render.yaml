@@ -2,7 +2,7 @@ services:
   - type: web
     name: cineforge-studio
     runtime: static
-    branch: feat/cineforge-studio-core
+    branch: feat/cineforge-cinematic-media-v2
     rootDir: apps/cineforge-studio
     buildCommand: ""
     staticPublishPath: .

@@ -1,6 +1,6 @@
 # CineForge Studio — Master Roadmap
 
-Project state: Phase 0 verified; Phase 1 (cinematic asset renderer) is the active workstream.
+Project state: Phase 0 verified; Phase 1 implementation and CI are verified on Draft PR #12; Phase 2 story/shot planner is next.
 Operating constraints: phone-first, free-first, no computer, no paid APIs, no model-weight downloads or bulk media downloads without an estimate and explicit approval. The existing Render host is optional; GitHub is the source of truth and Canva is for design handoff.
 
 ## Final product
@@ -34,8 +34,8 @@ Completed baseline:
 - Foundation workflow #3 passed; 6 unit tests passed; 40-second 1920×1080 at 24 fps sample MP4 inspected.
 - Current foundation lives in apps/cineforge-studio on feat/cineforge-studio-core; PR #11 is Draft and not merged.
 
-## Phase 1 — cinematic media renderer (current)
-Goal: move beyond text-only cards into user-supplied visual shots with camera movement, voice, music and technical output checks.
+## Phase 1 — cinematic media renderer (implemented; Draft PR #12)
+Goal: move beyond text-only cards into user-supplied visual shots with camera movement, voice, music and technical output checks. The implementation passed the exact-head workflow run 41663752833.
 Deliverables:
 - Per-scene image path under jobs/assets (PNG/JPG/JPEG/WEBP).
 - Static, push-in, pull-out, pan-left/right/up/down camera moves.

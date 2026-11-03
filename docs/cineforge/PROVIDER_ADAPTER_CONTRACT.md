@@ -32,4 +32,10 @@ Research snapshot (2026-11-03):
 - LTX API: generation billed per second; classify as paid.
 - Cloudflare Workers AI has a daily free Neuron allocation, but that alone does not demonstrate that a usable video-generation model is included. Do not assume video inference is free there.
 
-Recheck all plan terms before activation.
+Official references to recheck before activation:
+- Hugging Face ZeroGPU Spaces documentation: https://huggingface.co/docs/hub/main/spaces-zerogpu
+- LTX Studio free-tier and credits help: https://help.ltx.io/hc/en-us/articles/32042304720146-Is-LTX-Studio-free
+- LTX API pricing: https://docs.ltx.io/pricing/
+- Cloudflare Workers AI pricing: https://developers.cloudflare.com/workers-ai/platform/pricing/
+
+Recheck model availability, plan terms, queue limits, regional/account eligibility and rights before enabling any provider.

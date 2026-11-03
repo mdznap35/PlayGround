@@ -27,14 +27,14 @@ This CPU-first release does **not** generate realistic video clips from text, cl
 Open `index.html` in a browser, or deploy this folder as a Render Static Site:
 
 - Repository: `mdznap35/PlayGround`
-- Branch: `feat/cineforge-studio-core` (use `main` after merging the project)
+- Branch: `feat/cineforge-cinematic-media-v2` (use `main` after merging the project)
 - Root Directory: `apps/cineforge-studio`
 - Build Command: leave empty
 - Publish Directory: `.`
 
 The studio is static. It does not need a Render backend, persistent disk, database, or always-on server. Render's free static hosting is suitable for the interface; video rendering happens separately in GitHub Actions.
 
-**Simplest deployment:** in Render, choose **New → Blueprint**, connect this repository, and select branch `feat/cineforge-studio-core`. The root `render.yaml` defines the free static site, app root, and publish path. Render will show the service details before creation.
+**Simplest deployment:** in Render, choose **New → Blueprint**, connect this repository, and select branch `feat/cineforge-cinematic-media-v2`. The root `render.yaml` defines the free static site, app root, and publish path. Render will show the service details before creation.
 
 ## Render a video
 
@@ -42,8 +42,9 @@ The studio is static. It does not need a Render backend, persistent disk, databa
 2. Upload permitted still images into `apps/cineforge-studio/jobs/assets/` and audio into `apps/cineforge-studio/jobs/audio/`.
 3. Add the JSON file to `apps/cineforge-studio/jobs/`. Use paths relative to that directory, for example `assets/scene-01.webp`, `audio/voiceover.mp3` and `audio/music-bed.mp3`.
 4. Set each scene's `image_file` and `camera_move`; set top-level `voiceover_file`, `music_file` and `music_volume` as needed. Older projects using a single `audio_file` at the root of `jobs/` remain supported.
-5. A push changing a job JSON or its image/audio assets starts the workflow. You can also run **Actions → CineForge CPU Renderer → Run workflow** and choose the job file.
-6. Download the artifact. It contains the MP4 and technical QA reports.
+5. Commit the job JSON and media together. A push that changes a job JSON starts the render workflow automatically.
+6. When adding media in a separate later commit without changing a job JSON, open **Actions → CineForge CPU Renderer → Run workflow**, then choose the exact job file. This avoids accidentally rendering the sample project.
+7. Download the artifact. It contains the MP4 and technical QA reports.
 
 The sample job is `jobs/demo.json`. The renderer validates paths, duration, scene count, text lengths, camera movement and media extensions before processing. Image/audio files must already be committed: the workflow does not download media.
 

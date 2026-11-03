@@ -7,9 +7,8 @@ on:
       - feat/cineforge-studio-core
       - feat/cineforge-cinematic-media-v2
     paths:
+      - "apps/cineforge-studio/jobs/*.json"
       - "apps/cineforge-studio/jobs/**/*.json"
-      - "apps/cineforge-studio/jobs/assets/**"
-      - "apps/cineforge-studio/jobs/audio/**"
       - "apps/cineforge-studio/render.py"
       - "apps/cineforge-studio/tests/**"
       - ".github/workflows/cineforge-render.yml"
