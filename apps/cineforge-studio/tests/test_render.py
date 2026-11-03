@@ -32,6 +32,19 @@ class JobValidationTests(unittest.TestCase):
     def test_rejects_unsupported_schema(self):
         job=sample_job(); job["schema_version"]=99
         with self.assertRaisesRegex(ValueError,"Unsupported schema"): validate_job(job)
+    def test_story_context_metadata_is_preserved_without_changing_renderer_schema(self):
+        job = sample_job()
+        job["story_context"] = {
+            "schema": "cineforge.story-plan",
+            "schema_version": 2,
+            "audience": "طلاب المدارس",
+            "characters": [{"name": "العالمة", "notes": "معطف أزرق"}]
+        }
+        result = validate_job(job)
+        self.assertEqual(result["schema_version"], 1)
+        self.assertEqual(result["story_context"]["audience"], "طلاب المدارس")
+        self.assertEqual(result["story_context"]["characters"][0]["notes"], "معطف أزرق")
+
     def test_legacy_audio_file_in_jobs_root_remains_compatible(self):
         job = sample_job()
         job["audio_file"] = "narration.mp3"
