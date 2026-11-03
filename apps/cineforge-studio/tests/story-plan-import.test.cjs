@@ -57,6 +57,12 @@ test("distributes duration evenly when all beat weights are zero", () => {
   assert.equal(Math.max(...result.scenes.map(scene => scene.seconds)) - Math.min(...result.scenes.map(scene => scene.seconds)), 0);
 });
 
+test("caps every beat at 90 seconds when importing the seven-beat maximum duration", () => {
+  const result = importer.convert(plan({ target_minutes: 10.5 }));
+  assert.equal(result.scenes.reduce((sum, scene) => sum + scene.seconds, 0), 630);
+  assert.ok(result.scenes.every(scene => scene.seconds === 90));
+});
+
 test("rejects unsupported schema and malformed documents", () => {
   assert.throws(() => importer.convert(null), /JSON/);
   assert.throws(() => importer.convert(plan({ schema: "other" })), /غير مدعومة/);
