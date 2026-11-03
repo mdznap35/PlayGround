@@ -69,6 +69,8 @@
           </div>
           <div class="panel-footer">
             <span class="micro-note">المخطط الأولي قابل للتعديل بالكامل قبل التصدير.</span>
+            <button class="secondary-button" id="importStoryButton" type="button"><span>استيراد خطة القصة JSON</span><b>↙</b></button>
+            <input id="storyPlanFile" type="file" accept=".json,application/json" hidden>
             <button class="primary-button" id="generateButton" type="button"><span>بناء مخطط المشاهد</span><b>←</b></button>
           </div>
         </section>
@@ -130,6 +132,7 @@
     <p>ملف JSON هو وصف إنتاج الفيديو، وليس الفيديو نفسه. بعد رفعه إلى مجلد jobs وتشغيل GitHub Actions، سيُنتج المحرك ملف MP4.</p>
     <p class="dialog-note">المعالجة الحالية قائمة على Motion Graphics. توليد لقطات AI واقعية يحتاج موصل GPU منفصلاً، وهو غير مفعّل في هذا الإصدار.</p>
   </dialog>
+  <script src="./story-plan-import.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>
