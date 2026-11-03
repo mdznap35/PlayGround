@@ -65,7 +65,7 @@ test("rejects unsupported schema and malformed documents", () => {
 
 test("rejects plans whose duration cannot be allocated within renderer limits", () => {
   assert.throws(() => importer.convert(plan({ target_minutes: 16 })), /15 دقيقة/);
-  assert.throws(() => importer.convert(plan({ target_minutes: 3, beats: Array(40).fill({ title:"مشهد",share:1 }) })), /توزيع هذه المدة/);
+  assert.throws(() => importer.convert(plan({ target_minutes: 1, beats: Array(40).fill({ title:"مشهد",share:1 }) })), /توزيع هذه المدة/);
   assert.throws(() => importer.convert(plan({ target_minutes: 0.1, beats: Array(40).fill({ title:"مشهد",share:1 }) })), /توزيع هذه المدة/);
 });
 
