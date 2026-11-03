@@ -1,8 +1,8 @@
-import sys, tempfile, unittest
+import json, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from render import validate_job, resolve_media_path, camera_filter, draw_scene
+from render import validate_job, resolve_media_path, camera_filter, draw_scene, render
 from PIL import Image
 
 def sample_job():
@@ -104,6 +104,57 @@ class JobValidationTests(unittest.TestCase):
             }
             with self.assertRaisesRegex(ValueError, "is missing or points outside"):
                 draw_scene(scene, 1, 1, "16:9", "cinematic", root / "frame.png", root)
+
+    def test_end_to_end_image_voice_and_music_render_has_audio(self):
+        if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
+            self.skipTest("FFmpeg and FFprobe are required for the media integration test.")
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            (root / "assets").mkdir()
+            (root / "audio").mkdir()
+            Image.new("RGB", (320, 180), (18, 62, 100)).save(root / "assets" / "shot.png")
+            for filename, frequency in (("voice.wav", 440), ("music.wav", 220)):
+                subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-f", "lavfi", "-i", f"sine=frequency={frequency}:duration=2",
+                    "-c:a", "pcm_s16le", str(root / "audio" / filename)
+                ], check=True, capture_output=True)
+            job = {
+                "schema_version": 1,
+                "title": "Integration render",
+                "aspect": "16:9",
+                "style": "cinematic",
+                "fps": 24,
+                "voiceover_file": "audio/voice.wav",
+                "music_file": "audio/music.wav",
+                "music_volume": 0.12,
+                "scenes": [{
+                    "title": "A blue horizon",
+                    "narration": "A short test narration.",
+                    "visual": "A still image with a slow camera move.",
+                    "image_file": "assets/shot.png",
+                    "camera_move": "pan_left",
+                    "seconds": 3
+                }]
+            }
+            job_path = root / "integration.json"
+            job_path.write_text(json.dumps(job), encoding="utf-8")
+            output = root / "integration.mp4"
+            render(job_path, output)
+            self.assertTrue(output.is_file())
+            probe = subprocess.run([
+                "ffprobe", "-v", "error", "-show_entries",
+                "stream=codec_type,codec_name,width,height,r_frame_rate",
+                "-show_entries", "format=duration", "-of", "json", str(output)
+            ], check=True, capture_output=True, text=True)
+            metadata = json.loads(probe.stdout)
+            video = next(s for s in metadata["streams"] if s["codec_type"] == "video")
+            audio = next(s for s in metadata["streams"] if s["codec_type"] == "audio")
+            self.assertEqual(video["codec_name"], "h264")
+            self.assertEqual((video["width"], video["height"]), (1920, 1080))
+            self.assertEqual(video["r_frame_rate"], "24/1")
+            self.assertEqual(audio["codec_name"], "aac")
+            self.assertAlmostEqual(float(metadata["format"]["duration"]), 3.0, delta=0.8)
 
     def test_media_resolution_rejects_symlink_escape(self):
         with tempfile.TemporaryDirectory() as folder, tempfile.TemporaryDirectory() as outside:
