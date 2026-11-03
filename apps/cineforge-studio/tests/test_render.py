@@ -2,7 +2,8 @@ import sys, tempfile, unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from render import validate_job, resolve_media_path
+from render import validate_job, resolve_media_path, camera_filter, draw_scene
+from PIL import Image
 
 def sample_job():
     return {"schema_version":1,"title":"Test film","aspect":"16:9","style":"cinematic","fps":24,
