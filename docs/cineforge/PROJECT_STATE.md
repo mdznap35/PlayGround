@@ -165,3 +165,11 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Added dedicated Node tests for project migration, revisions, timeline timing, collision rejection, snapping, trim/split/remove behavior, renderer compatibility and storage fallback/recovery. CI syntax-checks both new modules.
 - Compatibility boundary: timeline project documents now describe richer editing structure, but the deployed CPU renderer still renders the sequential scene array and the current single voiceover/music source fields. Arbitrary clip mixing, transitions, subtitles and true video-clip rendering are not claimed.
 - Browser IndexedDB, mobile drag gestures, project reload after browser restart, Render's exact deployed revision, and Android device behavior still require direct smoke testing.
+
+
+## Project engine compatibility correction — 2026-11-04
+
+- The first exact-head CI attempt on `d89b6254a7a45694f1645d5d075e329516960e29` exposed one migration regression: old local editor drafts did not forward `selectedScene` and `storyPlan` into project v2. This is being corrected and guarded by the migration test; that failed run is not counted as a successful verification.
+- Project import from `.cineforge.json` now validates renderer compatibility before opening, so mismatched clip order/duration and unsupported timing arrangements are rejected instead of silently discarded.
+- Renderer compatibility checks confirm that each image clip maps to the corresponding scene in the same order and duration. Project validation also checks stored timeline duration against the latest clip endpoint.
+- The first-round CI test failure is retained in the evidence history; only the next exact-head run can establish a passing state for this correction.

@@ -270,7 +270,7 @@
     right.className = "scene-side";
     right.append(duration, tools);
     card.append(number, content, right);
-    card.addEventListener("click", () => { selectedScene = index; renderSceneSelection(); });
+    card.addEventListener("click", () => { selectedScene = index; renderSceneSelection(); scheduleSave(); });
     return card;
   }
 
@@ -356,7 +356,7 @@
             button.dataset.sceneIndex=String(sceneIndex);
             button.draggable=true;
             button.addEventListener("click",()=>{
-              if (sceneIndex>=0) { selectedScene=sceneIndex; renderSceneSelection(); }
+              if (sceneIndex>=0) { selectedScene=sceneIndex; renderSceneSelection(); scheduleSave(); }
             });
             button.addEventListener("dragstart",event=>{
               if (sceneIndex<0) return;
@@ -882,6 +882,28 @@
 
   $("generateButton").addEventListener("click", makeOutline);
   $("importStoryButton").addEventListener("click", () => $("storyPlanFile").click());
+  $("importProjectFileButton").addEventListener("click", () => $("projectFile").click());
+  $("projectFile").addEventListener("change", async () => {
+    const file=$("projectFile").files && $("projectFile").files[0];
+    if (!file) return;
+    try {
+      if (file.size>4*1024*1024) throw new Error("ملف المشروع أكبر من 4 ميغابايت.");
+      const document=JSON.parse(await file.text());
+      const project=projectEngine.normalizeProject(document);
+      const compatibility=projectEngine.rendererCompatibility(project);
+      if (!compatibility.ok) {
+        throw new Error("لا يمكن فتح هذا الخط الزمني في محرر الرندر الحالي دون فقدان بيانات: "+compatibility.errors.join("؛ "));
+      }
+      applyProjectDocument(project);
+      renderAll();
+      scheduleSave();
+      setSavedState("تم استيراد ملف المشروع الكامل");
+    } catch(error) {
+      alert("تعذّر استيراد المشروع: "+(error.message||"ملف غير صالح."));
+    } finally {
+      $("projectFile").value="";
+    }
+  });
   $("storyPlanFile").addEventListener("change", async () => {
     const file = $("storyPlanFile").files && $("storyPlanFile").files[0];
     if (!file) return;

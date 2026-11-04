@@ -140,3 +140,6 @@ The browser project document uses the versioned contract cineforge.project@2. It
 - project-engine.js exposes frame-snapped move, trim, split and remove operations with validation. Unsupported timeline arrangements are detected by the renderer-compatibility gate rather than silently flattened.
 
 The project engine and storage modules are dependency-free browser scripts with Node test coverage. Browser IndexedDB behavior and Android interaction still require a real-browser smoke test.
+
+
+Project files can be reopened with **فتح ملف مشروع محفوظ**. Import accepts the versioned project JSON, validates its timeline, and rejects layouts that the current renderer/editor cannot preserve without flattening. The renderer job JSON and the editable project JSON are separate formats.

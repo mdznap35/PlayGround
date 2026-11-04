@@ -154,7 +154,10 @@
     }
     if (input.form && Array.isArray(input.scenes)) return createProject({
       id:input.id, form:input.form, scenes:input.scenes,
-      selected_scene_id:input.selected_scene_id, storyPlan:input.story_context,
+      selectedScene:input.selectedScene,
+      selected_scene_id:input.selected_scene_id,
+      storyPlan:input.storyPlan,
+      story_context:input.story_context,
       created_at:input.created_at
     }, null);
     if (Array.isArray(input.scenes)) return createProject({
@@ -179,9 +182,16 @@
     }
     const sceneIds = new Set(project.scenes.map(scene => String(scene.id)));
     if (sceneIds.size !== project.scenes.length) throw new TypeError("توجد معرّفات مشاهد مكررة.");
-    if (!project.timeline || project.timeline.version !== 1 || !Array.isArray(project.timeline.tracks)) {
+    if (!project.timeline || project.timeline.version !== 1 || !Array.isArray(project.timeline.tracks) ||
+        project.timeline.tracks.length<1 || project.timeline.tracks.length>12) {
       throw new TypeError("بنية المسارات الزمنية غير صالحة.");
     }
+    const sceneDuration=project.scenes.reduce((sum,scene)=>{
+      const duration=finite(scene.seconds,NaN);
+      if (!Number.isFinite(duration) || duration<3 || duration>90) throw new RangeError("مدة المشهد يجب أن تكون بين 3 و90 ثانية.");
+      return sum+duration;
+    },0);
+    if (sceneDuration>MAX_SECONDS) throw new RangeError("مجموع مدة المشاهد يتجاوز 900 ثانية.");
     const trackIds = new Set();
     let maxEnd = 0;
     for (const track of project.timeline.tracks) {
@@ -190,7 +200,8 @@
       }
       trackIds.add(track.id);
       const clipIds = new Set();
-      const clips = Array.isArray(track.clips) ? track.clips : [];
+      if (!Array.isArray(track.clips)) throw new TypeError("قائمة مقاطع المسار غير صالحة.");
+      const clips = track.clips;
       const sorted = clips.slice().sort((a,b) => finite(a.start,0) - finite(b.start,0));
       let previousEnd = -1;
       for (const clip of sorted) {
@@ -213,6 +224,9 @@
       }
     }
     if (maxEnd > MAX_SECONDS + 0.0001) throw new RangeError("الخط الزمني يتجاوز 900 ثانية.");
+    if (Math.abs(finite(project.timeline.duration,NaN)-maxEnd)>0.001) {
+      throw new RangeError("مدة الخط الزمني لا تطابق نهاية أطول مقطع.");
+    }
     return {valid:true, duration:maxEnd, scene_count:project.scenes.length};
   }
 
@@ -319,8 +333,12 @@
       const clips = video[0].clips.slice().sort((a,b) => a.start - b.start);
       if (clips.length !== project.scenes.length) return {ok:false, errors:["يجب أن يحتوي مسار الصورة على مقطع واحد لكل مشهد."]};
       let cursor = 0;
-      for (const clip of clips) {
+      for (let index=0;index<clips.length;index++) {
+        const clip=clips[index];
+        const scene=project.scenes[index];
         if (Math.abs(clip.start - cursor) > 0.001) return {ok:false, errors:["توجد فجوة أو تداخل في مسار الصورة؛ المصيّر v1 يتعامل مع المشاهد المتتابعة فقط."]};
+        if (String(clip.scene_id)!==String(scene.id)) return {ok:false, errors:["ترتيب مقاطع الصورة لا يطابق ترتيب المشاهد الذي يستخدمه المصيّر v1."]};
+        if (Math.abs(clip.duration - Number(scene.seconds)) > 0.001) return {ok:false, errors:["مدة أحد مقاطع الصورة لا تطابق مدة المشهد المرتبط به في المصيّر v1."]};
         cursor += clip.duration;
       }
       const errors = [];

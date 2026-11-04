@@ -107,3 +107,31 @@ test("rejects overlapping clips in a non-overlap track and invalid scene referen
   wrong.timeline.tracks[0].clips[0].scene_id="missing";
   assert.throws(()=>engine.validateProject(wrong),/غير موجود/);
 });
+
+test("renderer compatibility rejects image clip order drift", () => {
+  const project=engine.createProject(editorState());
+  const clips=project.timeline.tracks[0].clips;
+  [clips[0],clips[1]]=[clips[1],clips[0]];
+  let cursor=0;
+  clips.forEach(clip=>{clip.start=cursor;cursor+=clip.duration;});
+  project.timeline.duration=cursor;
+  const result=engine.rendererCompatibility(project);
+  assert.equal(result.ok,false);
+  assert.match(result.errors.join(" "),/ترتيب/);
+});
+
+test("renderer compatibility rejects scene duration drift", () => {
+  const project=engine.createProject(editorState());
+  project.timeline.tracks[0].clips[0].duration=9;
+  project.timeline.tracks[0].clips[1].start=9;
+  project.timeline.duration=17;
+  const result=engine.rendererCompatibility(project);
+  assert.equal(result.ok,false);
+  assert.match(result.errors.join(" "),/مدة/);
+});
+
+test("rejects an incorrect stored timeline duration", () => {
+  const project=engine.createProject(editorState());
+  project.timeline.duration+=1;
+  assert.throws(()=>engine.validateProject(project),/مدة الخط الزمني/);
+});
