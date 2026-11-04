@@ -342,10 +342,33 @@
         cursor += clip.duration;
       }
       const errors = [];
+      for (const track of project.timeline.tracks) {
+        if (!["video","voiceover","music"].includes(track.type) && track.clips.length) {
+          errors.push("المصيّر v1 لا يدعم مقاطع في مسار " + track.type + ".");
+        }
+      }
       for (const type of ["voiceover","music"]) {
-        const track = project.timeline.tracks.find(item => item.type === type);
-        if (track && track.clips.length > 1) errors.push("المصيّر v1 لا يخلط عدة مقاطع في مسار " + type + ".");
-        if (track && track.clips[0] && track.clips[0].start !== 0) errors.push("المصيّر v1 لا يدعم إزاحة بداية مسار " + type + ".");
+        const matching = project.timeline.tracks.filter(item => item.type === type);
+        if (matching.length > 1) {
+          errors.push("المصيّر v1 يحتاج مساراً واحداً فقط لنوع " + type + ".");
+          continue;
+        }
+        const track = matching[0];
+        const clips = track ? track.clips : [];
+        const sourceField = type + "_file";
+        const expectedSource = clean(project.form && project.form[sourceField],180,"");
+        if (clips.length > 1) errors.push("المصيّر v1 لا يخلط عدة مقاطع في مسار " + type + ".");
+        if (Boolean(clips.length) !== Boolean(expectedSource)) {
+          errors.push("مصدر " + type + " في المسار لا يطابق إعداد المشروع.");
+        }
+        if (clips[0]) {
+          if (clips[0].start !== 0) errors.push("المصيّر v1 لا يدعم إزاحة بداية مسار " + type + ".");
+          if (clips[0].source !== expectedSource) errors.push("ملف " + type + " في المسار لا يطابق ملف المشروع.");
+          if (Math.abs(clips[0].duration - cursor) > 0.001) errors.push("مدة مسار " + type + " لا تطابق مدة الفيديو.");
+          if (type === "music" && Math.abs(finite(clips[0].volume,0.18)-finite(project.form.music_volume,0.18))>0.001) {
+            errors.push("مستوى الموسيقى في المسار لا يطابق إعداد المشروع.");
+          }
+        }
       }
       return {ok:errors.length === 0,errors:errors};
     } catch (error) {

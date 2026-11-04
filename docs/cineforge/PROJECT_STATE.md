@@ -173,3 +173,10 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Project import from `.cineforge.json` now validates renderer compatibility before opening, so mismatched clip order/duration and unsupported timing arrangements are rejected instead of silently discarded.
 - Renderer compatibility checks confirm that each image clip maps to the corresponding scene in the same order and duration. Project validation also checks stored timeline duration against the latest clip endpoint.
 - The first-round CI test failure is retained in the evidence history; only the next exact-head run can establish a passing state for this correction.
+
+
+
+## Recovery and renderer-gate hardening — 2026-11-04
+
+- Snapshot restoration now creates a new monotonically increasing project revision above the current saved head; it does not move the revision counter backwards. Re-importing a project with the same project ID follows the same rule.
+- Renderer compatibility now rejects non-empty subtitle/overlay lanes, duplicate audio lanes, mismatched audio sources or timing, and mismatched music volume. This prevents the v1 renderer adapter from silently discarding unsupported track edits.

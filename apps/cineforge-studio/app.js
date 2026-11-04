@@ -805,7 +805,14 @@
       if (!previous) throw new Error("تعذّر قراءة النسخة الاحتياطية.");
       const normalized=projectEngine.normalizeProject(previous);
       const editor=projectEngine.toEditorState(normalized);
-      applyProjectDocument(normalized,editor);
+      const restored=projectEngine.createProject({
+        id:normalized.id,
+        form:editor.form,
+        scenes:editor.scenes,
+        selectedScene:editor.selectedScene,
+        storyPlan:editor.storyPlan
+      },current,new Date().toISOString());
+      applyProjectDocument(restored,editor);
       renderAll();
       scheduleSave();
       setSavedState("تمت استعادة نسخة سابقة");
@@ -894,7 +901,18 @@
       if (!compatibility.ok) {
         throw new Error("لا يمكن فتح هذا الخط الزمني في محرر الرندر الحالي دون فقدان بيانات: "+compatibility.errors.join("؛ "));
       }
-      applyProjectDocument(project);
+      let imported=project;
+      if (projectDocument && projectDocument.id===project.id) {
+        const editor=projectEngine.toEditorState(project);
+        imported=projectEngine.createProject({
+          id:project.id,
+          form:editor.form,
+          scenes:editor.scenes,
+          selectedScene:editor.selectedScene,
+          storyPlan:editor.storyPlan
+        },projectDocument,new Date().toISOString());
+      }
+      applyProjectDocument(imported);
       renderAll();
       scheduleSave();
       setSavedState("تم استيراد ملف المشروع الكامل");

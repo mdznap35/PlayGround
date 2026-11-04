@@ -135,3 +135,36 @@ test("rejects an incorrect stored timeline duration", () => {
   project.timeline.duration+=1;
   assert.throws(()=>engine.validateProject(project),/مدة الخط الزمني/);
 });
+
+test("renderer compatibility rejects nonempty subtitle or overlay tracks", () => {
+  const project=engine.createProject(editorState());
+  project.timeline.tracks.push({
+    id:"track-subtitles",type:"subtitle",name:"Subtitles",enabled:true,allow_overlap:true,
+    clips:[{id:"subtitle-1",name:"Caption",source:"captions.srt",start:0,source_in:0,duration:18}]
+  });
+  const result=engine.rendererCompatibility(project);
+  assert.equal(result.ok,false);
+  assert.match(result.errors.join(" "),/لا يدعم مقاطع/);
+});
+
+test("renderer compatibility rejects audio source and duration drift", () => {
+  const project=engine.createProject(editorState());
+  const voiceover=project.timeline.tracks.find(track=>track.type==="voiceover");
+  voiceover.clips[0].source="audio/other.wav";
+  let result=engine.rendererCompatibility(project);
+  assert.equal(result.ok,false);
+  assert.match(result.errors.join(" "),/ملف voiceover/);
+  voiceover.clips[0].source="audio/voice.wav";
+  voiceover.clips[0].duration-=1;
+  project.timeline.duration=18;
+  result=engine.rendererCompatibility(project);
+  assert.equal(result.ok,false);
+  assert.match(result.errors.join(" "),/مدة مسار voiceover/);
+});
+
+test("renderer compatibility rejects duplicate music lanes", () => {
+  const project=engine.createProject(editorState());
+  project.timeline.tracks.push(JSON.parse(JSON.stringify(project.timeline.tracks.find(track=>track.type==="music"))));
+  project.timeline.tracks[3].id="track-music-copy";
+  assert.equal(engine.rendererCompatibility(project).ok,false);
+});

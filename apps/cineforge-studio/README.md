@@ -143,3 +143,6 @@ The project engine and storage modules are dependency-free browser scripts with 
 
 
 Project files can be reopened with **فتح ملف مشروع محفوظ**. Import accepts the versioned project JSON, validates its timeline, and rejects layouts that the current renderer/editor cannot preserve without flattening. The renderer job JSON and the editable project JSON are separate formats.
+
+
+Project restore is revision-monotonic: restoring an older snapshot creates a new revision above the current head instead of reverting the revision counter. Reopening a project with the same project ID also creates a new checkpoint above the currently stored revision. Import rejects non-empty subtitle/overlay lanes and mismatched audio source/timing metadata because the current renderer does not yet implement those lanes.
