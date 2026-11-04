@@ -127,3 +127,13 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Added ACE-Step 1.5 and Stable Audio 3 Small as music/SFX candidates, plus refreshed Whisper.cpp/Piper notes. All remain research candidates until installed and tested.
 - No new model weights were downloaded; no GPU notebook, ComfyUI provider, Cloudflare Worker, D1 or R2 bucket was deployed. Existing runtime remains Pillow + FFmpeg + FFprobe on GitHub Actions CPU, with Render serving the static UI.
 - Next: update Issue #20 with GPU compatibility caveats; finish the story/editor round-trip and Media Bin; then run a cloud GPU preflight before approving a specific model download.
+
+
+## GPU Fleet Strategy — 2026-11-04
+
+- Added `docs/cineforge/GPU_FLEET_STRATEGY_AR.md`: revised provider strategy, policy boundaries, model/hardware compatibility gates, quota accounting, benchmark protocol, checkpointing architecture and staged implementation plan.
+- Added `apps/cineforge-studio/gpu_preflight.py`: read-only hardware preflight. It records OS/Python, RAM, free disk, NVIDIA GPU/VRAM/driver, optional PyTorch/CUDA/compute capability/BF16 and safety flags. It does not install packages, use the network, read environment secrets, start workers or download weights.
+- Added `apps/cineforge-studio/tests/test_gpu_preflight.py`: four unit tests covering report structure, missing NVIDIA tooling, separate multi-GPU reporting and JSON output.
+- Commits: strategy doc `(see branch history)`; preflight `88d2af0d8ea105290c1864a277382dd33dc39ba1`; tests `2416ac35eabea5d0b77b9aaacc7be1f2fa8bf76c`.
+- Local verification reported four unit tests passing. GitHub Actions status for the latest test commit has not yet returned a workflow run through the available PR-run endpoint; do not claim CI passed.
+- No GPU provider has been connected or run. No model weights downloaded. No paid resources activated. No PR merge.
