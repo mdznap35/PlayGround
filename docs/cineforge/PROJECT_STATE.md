@@ -153,3 +153,15 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 
 
 - Follow-up hardening: the ZIP sidecar manifest is outside the jobs folder, and the render workflow now selects only JSON documents with renderer schema_version 1 and a scenes array. Manual workflow dispatch also validates the selected job structure. Added a renderer test proving project/media provenance metadata survives validation without changing renderer schema version 1.
+
+
+## Project engine v2 + multi-track editor — 2026-11-04
+
+- Added apps/cineforge-studio/project-engine.js: canonical cineforge.project@2 document, stable project identity/revisions, legacy-editor-state migration, scene normalization, and a multi-track model (picture, voiceover, music) while leaving renderer job schema v1 unchanged.
+- Added timeline editing primitives: frame snapping, clip move, start/end trim with source-offset preservation, split with source-range preservation, clip removal, structural validation and a renderer-v1 compatibility gate for contiguous image clips and single aligned audio sources.
+- Added apps/cineforge-studio/project-storage.js: IndexedDB project storage with localStorage fallback, autosaved revision checkpoints, and a bounded 12-snapshot recovery history per project.
+- Integrated autosave/load/migration into the editor. Added complete .cineforge.json export, one-click recovery of the latest previous snapshot, and inclusion of the full editable project document in ZIP packages.
+- Added a visible picture/voiceover/music timeline. Picture clips can be selected and reordered by drag-and-drop; scene card controls remain available as a touch-friendly fallback. Audio lanes visualize linked files and clearly disclose the current renderer's one-file-per-lane limitation.
+- Added dedicated Node tests for project migration, revisions, timeline timing, collision rejection, snapping, trim/split/remove behavior, renderer compatibility and storage fallback/recovery. CI syntax-checks both new modules.
+- Compatibility boundary: timeline project documents now describe richer editing structure, but the deployed CPU renderer still renders the sequential scene array and the current single voiceover/music source fields. Arbitrary clip mixing, transitions, subtitles and true video-clip rendering are not claimed.
+- Browser IndexedDB, mobile drag gestures, project reload after browser restart, Render's exact deployed revision, and Android device behavior still require direct smoke testing.

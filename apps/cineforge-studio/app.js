@@ -6,10 +6,16 @@
   const storyPlanImporter = window.CineForgeStoryPlanImporter;
   const narrationFit = window.CineForgeNarrationFit;
   const mediaBin = window.CineForgeMediaBin;
+  const projectEngine = window.CineForgeProjectEngine;
+  const projectStorage = window.CineForgeProjectStorage;
   if (!mediaBin) throw new Error("CineForge Media Bin failed to load.");
+  if (!projectEngine) throw new Error("CineForge Project Engine failed to load.");
+  if (!projectStorage) throw new Error("CineForge Project Storage failed to load.");
   if (!storyPlanImporter) throw new Error("CineForge Story Plan importer failed to load.");
   if (!narrationFit) throw new Error("CineForge narration-fit analyzer failed to load.");
   let importedStoryPlan = null;
+  let projectDocument = null;
+  let saveChain = Promise.resolve();
   const palette = {
     cinematic: ["#092039", "#17465a", "#b8f3d3"],
     documentary: ["#172438", "#38516a", "#d9c49b"],
@@ -172,7 +178,7 @@
     title.value = scene.title;
     title.maxLength = 100;
     title.setAttribute("aria-label", "عنوان المشهد " + (index + 1));
-    title.addEventListener("input", () => { scene.title = title.value; updatePreview(); scheduleSave(); });
+    title.addEventListener("input", () => { scene.title = title.value; updatePreview(); renderTimeline(); scheduleSave(); });
 
     const narration = document.createElement("textarea");
     narration.className = "scene-description";
@@ -284,16 +290,114 @@
 
   function renderTimeline() {
     const total = totalSeconds();
+    const safeTotal = Math.max(1,total);
     $("runtimeTotal").textContent = timecode(total);
-    const track = $("timelineTrack");
-    track.replaceChildren();
+    const summaryTrack = $("timelineTrack");
+    summaryTrack.replaceChildren();
     scenes.forEach((scene) => {
       const segment = document.createElement("span");
       segment.className = "timeline-segment";
       segment.style.flex = String(Math.max(1, Number(scene.seconds) || 1));
       segment.title = scene.title + " — " + scene.seconds + "s";
-      track.append(segment);
+      summaryTrack.append(segment);
     });
+
+    const timeline = projectEngine.buildTimeline(scenes,{
+      voiceover_file:$("voiceoverFile").value.trim(),
+      music_file:$("musicFile").value.trim(),
+      music_volume:Number($("musicVolume").value)
+    });
+    const ruler = $("timelineRuler");
+    const lanes = $("multiTrackTimeline");
+    if (!ruler || !lanes) return;
+    ruler.replaceChildren();
+    const step = total <= 60 ? 10 : total <= 180 ? 30 : 60;
+    for (let second=0;second<=total;second+=step) {
+      const tick=document.createElement("span");
+      tick.className="timeline-ruler-tick";
+      tick.style.left=(second/safeTotal*100)+"%";
+      tick.textContent=timecode(second);
+      ruler.append(tick);
+    }
+    if (total % step !== 0) {
+      const tick=document.createElement("span");
+      tick.className="timeline-ruler-tick timeline-ruler-end";
+      tick.style.left="100%";
+      tick.textContent=timecode(total);
+      ruler.append(tick);
+    }
+
+    lanes.replaceChildren();
+    timeline.tracks.forEach(track => {
+      const row=document.createElement("div");
+      row.className="timeline-lane-row timeline-lane-"+track.type;
+      const heading=document.createElement("div");
+      heading.className="timeline-lane-name";
+      heading.textContent=track.name;
+      const body=document.createElement("div");
+      body.className="timeline-lane-body";
+      if (!track.clips.length) {
+        const empty=document.createElement("span");
+        empty.className="timeline-lane-empty";
+        empty.textContent=track.type==="voiceover" ? "اربط ملف التعليق الصوتي من مكتبة الوسائط"
+          : track.type==="music" ? "اربط الموسيقى أو المؤثرات من مكتبة الوسائط" : "لا توجد مقاطع";
+        body.append(empty);
+      } else {
+        track.clips.forEach(clip => {
+          const button=document.createElement("button");
+          button.type="button";
+          button.className="timeline-clip";
+          button.style.left=(clip.start/safeTotal*100)+"%";
+          button.style.width=Math.max(clip.duration/safeTotal*100,Math.min(4,100/safeTotal))+"%";
+          button.title=clip.name+" · "+timecode(clip.start)+" — "+timecode(clip.start+clip.duration);
+          button.textContent=clip.name.length>22 ? clip.name.slice(0,21)+"…" : clip.name;
+          if (track.type==="video") {
+            const sceneIndex=scenes.findIndex(scene=>String(scene.id)===String(clip.scene_id));
+            button.dataset.sceneIndex=String(sceneIndex);
+            button.draggable=true;
+            button.addEventListener("click",()=>{
+              if (sceneIndex>=0) { selectedScene=sceneIndex; renderSceneSelection(); }
+            });
+            button.addEventListener("dragstart",event=>{
+              if (sceneIndex<0) return;
+              event.dataTransfer.setData("text/plain",String(sceneIndex));
+              event.dataTransfer.effectAllowed="move";
+            });
+            button.addEventListener("dragover",event=>event.preventDefault());
+            button.addEventListener("drop",event=>{
+              event.preventDefault();
+              event.stopPropagation();
+              const from=Number(event.dataTransfer.getData("text/plain"));
+              const to=Number(button.dataset.sceneIndex);
+              if (Number.isInteger(from) && Number.isInteger(to) && from!==to) reorderScene(from,to);
+            });
+          } else {
+            button.disabled=true;
+            button.setAttribute("aria-label",clip.name+" — معاينة مسار");
+          }
+          body.append(button);
+        });
+      }
+      if (track.type==="video") {
+        body.addEventListener("dragover",event=>event.preventDefault());
+        body.addEventListener("drop",event=>{
+          event.preventDefault();
+          const from=Number(event.dataTransfer.getData("text/plain"));
+          if (Number.isInteger(from) && from>=0 && from<scenes.length) reorderScene(from,scenes.length-1);
+        });
+      }
+      row.append(heading,body);
+      lanes.append(row);
+    });
+  }
+
+  function reorderScene(from, to) {
+    if (from<0 || to<0 || from>=scenes.length || to>=scenes.length || from===to) return;
+    const moved=scenes.splice(from,1)[0];
+    scenes.splice(to,0,moved);
+    selectedScene=to;
+    renderAll();
+    scheduleSave();
   }
 
   function moveScene(index, delta) {
@@ -560,8 +664,10 @@
       renderAll();
     } else if (target === "voiceover") {
       $("voiceoverFile").value = path;
+      renderTimeline();
     } else if (target === "music") {
       $("musicFile").value = path;
+      renderTimeline();
     }
     scheduleSave();
     setSavedState("تم ربط " + asset.name + " بالمشروع");
@@ -622,9 +728,22 @@
         asset_count:manifestAssets.length
       };
       job.media_manifest = manifestAssets;
+      const projectFilePath = "apps/cineforge-studio/projects/" + slug + ".cineforge.json";
+      const fullProject = makeProjectDocument();
+      job.project_manifest = {
+        schema:"cineforge.project",
+        schema_version:2,
+        created_at:fullProject.created_at,
+        project_file:projectFilePath,
+        project_revision:fullProject.revision,
+        timeline_schema_version:1,
+        renderer_job_schema_version:1,
+        asset_count:manifestAssets.length
+      };
       const jobRoot = "apps/cineforge-studio/jobs/";
       const entries = [
         {name:jobRoot + slug + ".json",data:JSON.stringify(job,null,2) + "\n"},
+        {name:projectFilePath,data:JSON.stringify(fullProject,null,2) + "\n"},
         {name:"apps/cineforge-studio/media-manifests/media-manifest-" + slug + ".json",data:JSON.stringify({
           schema:"cineforge.media-manifest",schema_version:1,project_title:job.title,assets:manifestAssets
         },null,2) + "\n"},
@@ -653,16 +772,81 @@
     $("musicVolumeValue").textContent = Math.round(Number($("musicVolume").value) * 100) + "%";
   }
 
+  function makeProjectDocument() {
+    const state={form:readForm(),scenes,selectedScene,storyPlan:importedStoryPlan};
+    return projectEngine.createProject(state,projectDocument);
+  }
+
+  function downloadFullProject() {
+    try {
+      const project=makeProjectDocument();
+      projectDocument=project;
+      const blob=new Blob([JSON.stringify(project,null,2)],{type:"application/json;charset=utf-8"});
+      const slug=(project.title||"cineforge").normalize("NFKC")
+        .replace(/[^\p{L}\p{N}-]+/gu,"-").replace(/^-|-$/g,"").slice(0,48)||"cineforge";
+      downloadBlob(blob,"cineforge-"+slug+".cineforge.json");
+      scheduleSave();
+      setSavedState("تم تنزيل ملف المشروع الكامل");
+    } catch(error) { alert("تعذّر تصدير المشروع: "+(error.message||"خطأ غير معروف")); }
+  }
+
+  async function restorePreviousVersion() {
+    try {
+      const current=projectDocument || makeProjectDocument();
+      const history=await projectStorage.listSnapshots(current.id);
+      if (!history.length) {
+        alert("لا توجد نسخة سابقة محفوظة بعد. تُنشأ النسخ السابقة تلقائياً عند تعديل المشروع وحفظ إصدار جديد.");
+        return;
+      }
+      const latest=history[0];
+      const date=new Date(latest.createdAt).toLocaleString("ar");
+      if (!confirm("استعادة النسخة السابقة المحفوظة بتاريخ "+date+"؟ سيُحفظ الإصدار الحالي في سجل الاستعادة قبل الاستبدال.")) return;
+      const previous=await projectStorage.restoreSnapshot(latest.id);
+      if (!previous) throw new Error("تعذّر قراءة النسخة الاحتياطية.");
+      const normalized=projectEngine.normalizeProject(previous);
+      const editor=projectEngine.toEditorState(normalized);
+      applyProjectDocument(normalized,editor);
+      renderAll();
+      scheduleSave();
+      setSavedState("تمت استعادة نسخة سابقة");
+    } catch(error) { alert("تعذّرت استعادة النسخة: "+(error.message||"خطأ غير معروف")); }
+  }
+
+  function applyProjectDocument(project, suppliedState) {
+    const normalized=projectEngine.normalizeProject(project);
+    const state=suppliedState || projectEngine.toEditorState(normalized);
+    $("projectTitle").value=state.form.title || "مشروع بلا عنوان";
+    $("projectIdea").value=state.form.idea || "";
+    $("language").value=state.form.language || "ar";
+    $("style").value=state.form.style || "cinematic";
+    $("aspect").value=state.form.aspect || "16:9";
+    setExactTargetDuration(state.form.target_duration || 60);
+    $("voiceoverFile").value=state.form.voiceover_file || "";
+    $("musicFile").value=state.form.music_file || "";
+    $("musicVolume").value=String(state.form.music_volume ?? 0.18);
+    updateMusicVolumeLabel();
+    scenes=state.scenes.slice(0,40);
+    importedStoryPlan=state.storyPlan;
+    selectedScene=state.selectedScene;
+    projectDocument=normalized;
+  }
+
   function scheduleSave() {
     $("saveState").textContent = "يحفظ…";
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        const state = {form:readForm(), scenes, selectedScene, storyPlan:importedStoryPlan};
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        $("saveState").textContent = "محفوظ محلياً";
-      } catch { $("saveState").textContent = "تعذّر الحفظ المحلي"; }
-    }, 250);
+        const snapshot=makeProjectDocument();
+        projectDocument=snapshot;
+        saveChain=saveChain.catch(()=>{}).then(()=>projectStorage.save(snapshot)).then(result=>{
+          $("saveState").textContent=result.backend==="indexedDB" ? "محفوظ · IndexedDB" : "محفوظ · تخزين احتياطي";
+        }).catch(()=>{
+          $("saveState").textContent = "تعذّر الحفظ المحلي";
+        });
+      } catch (error) {
+        $("saveState").textContent = "تعذّر الحفظ: " + (error.message || "مشروع غير صالح");
+      }
+    }, 350);
   }
 
   function setSavedState(value) { $("saveState").textContent = value; }
@@ -713,6 +897,8 @@
   });
   $("addSceneButton").addEventListener("click", addScene);
   $("downloadButton").addEventListener("click", downloadJob);
+  $("downloadProjectFileButton").addEventListener("click", downloadFullProject);
+  $("restorePreviousVersionButton").addEventListener("click", restorePreviousVersion);
   $("downloadPackageButton").addEventListener("click", downloadProjectPackage);
   $("mediaFiles").addEventListener("change", addSelectedMediaFiles);
   $("addMediaButton").addEventListener("click", () => $("mediaFiles").click());
@@ -721,11 +907,41 @@
   $("closeHelp").addEventListener("click", () => $("helpDialog").close());
   $("musicVolume").addEventListener("input", () => { updateMusicVolumeLabel(); scheduleSave(); });
   ["projectTitle","projectIdea","language","style","aspect","targetDuration","voiceoverFile","musicFile"].forEach(id => {
-    $(id).addEventListener("input", () => { updatePreview(); if (id === "language") refreshNarrationFitIndicators(); scheduleSave(); });
-    $(id).addEventListener("change", () => { updatePreview(); if (id === "language") refreshNarrationFitIndicators(); scheduleSave(); });
+    $(id).addEventListener("input", () => { updatePreview(); if (id === "language") refreshNarrationFitIndicators(); if (id === "voiceoverFile" || id === "musicFile") renderTimeline(); scheduleSave(); });
+    $(id).addEventListener("change", () => { updatePreview(); if (id === "language") refreshNarrationFitIndicators(); if (id === "voiceoverFile" || id === "musicFile") renderTimeline(); scheduleSave(); });
   });
 
-  if (!restoreState()) importDemo();
-  renderAll();
-  refreshMediaBin();
+  async function initializeStudio() {
+    let loadedFromProjectStore=false;
+    try {
+      const stored=await projectStorage.loadLatest();
+      if (stored) {
+        applyProjectDocument(stored);
+        loadedFromProjectStore=true;
+      }
+    } catch (error) {
+      $("saveState").textContent="تعذّرت قراءة النسخة المحفوظة";
+    }
+    if (!loadedFromProjectStore) {
+      if (restoreState()) {
+        projectDocument=projectEngine.createProject({
+          form:readForm(),scenes,selectedScene,storyPlan:importedStoryPlan
+        },null);
+        scheduleSave();
+      } else {
+        importDemo();
+        scheduleSave();
+      }
+    }
+    renderAll();
+    refreshMediaBin();
+    if (loadedFromProjectStore) setSavedState("تمت استعادة آخر مشروع محفوظ");
+  }
+
+  initializeStudio().catch(error=>{
+    $("saveState").textContent="تعذّر بدء الاستوديو";
+    console.error(error);
+    if (!scenes.length) importDemo();
+    renderAll();
+  });
 })();

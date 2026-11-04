@@ -64,6 +64,8 @@ jobs:
       - name: Check browser JavaScript syntax
         run: |
           node --check apps/cineforge-studio/app.js
+          node --check apps/cineforge-studio/project-engine.js
+          node --check apps/cineforge-studio/project-storage.js
           node --check apps/cineforge-studio/story-planner.js
           node --check apps/cineforge-studio/story-plan-import.js
           node --check apps/cineforge-studio/media-bin.js

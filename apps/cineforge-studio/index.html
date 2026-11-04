@@ -70,6 +70,8 @@
           </div>
           <div class="panel-footer">
             <span class="micro-note">المخطط الأولي قابل للتعديل بالكامل قبل التصدير.</span>
+            <button class="secondary-button" id="downloadProjectFileButton" type="button"><span>تنزيل ملف المشروع الكامل v2</span><b>↓</b></button>
+            <button class="secondary-button" id="restorePreviousVersionButton" type="button"><span>استعادة نسخة سابقة</span><b>↶</b></button>
             <button class="secondary-button" id="importStoryButton" type="button"><span>استيراد خطة القصة JSON</span><b>↙</b></button>
             <input id="storyPlanFile" type="file" accept=".json,application/json" hidden>
             <button class="primary-button" id="generateButton" type="button"><span>بناء مخطط المشاهد</span><b>←</b></button>
@@ -92,6 +94,15 @@
               <div class="preview-caption"><span class="preview-indicator"></span><span id="previewTitle">افتتاحية: اتساع السؤال</span></div>
               <p class="preview-disclaimer" id="previewAsset">هذه معاينة تصميمية ثابتة؛ مسار الصورة يرفق عند الرندر السحابي.</p>
             </div>
+          </div>
+          <div class="timeline-editor" aria-label="الخط الزمني متعدد المسارات">
+            <div class="timeline-editor-heading">
+              <div><span class="section-index">03 / EDITING TIMELINE</span><h3>الخط الزمني متعدد المسارات</h3></div>
+              <span class="timeline-hint">اسحب مشاهد الصورة لإعادة ترتيبها · اختر المقطع لفتح المشهد</span>
+            </div>
+            <div class="timeline-ruler" id="timelineRuler" aria-hidden="true"></div>
+            <div class="multi-track-timeline" id="multiTrackTimeline" aria-live="polite"></div>
+            <p class="timeline-capability-note">المسارات الصوتية هنا تمثيل زمني للمصادر المرتبطة. المُصيّر الحالي يدمج ملف تعليق واحداً وموسيقى واحدة على كامل مدة الفيديو؛ مزج مقاطع متعددة والانتقالات المتقاطعة ما زالا ضمن مراحل التنفيذ التالية.</p>
           </div>
           <div class="timeline-footer">
             <div><span class="timeline-label">ESTIMATED RUNTIME</span><strong id="runtimeTotal">01:00</strong></div>
@@ -163,6 +174,8 @@
     <p class="dialog-note">المعالجة الحالية قائمة على Motion Graphics. توليد لقطات AI واقعية يحتاج موصل GPU منفصلاً، وهو غير مفعّل في هذا الإصدار.</p>
   </dialog>
   <script src="./story-plan-import.js" defer></script>
+  <script src="./project-engine.js" defer></script>
+  <script src="./project-storage.js" defer></script>
   <script src="./media-bin.js" defer></script>
   <script src="./narration-fit.js" defer></script>
   <script src="./app.js" defer></script>

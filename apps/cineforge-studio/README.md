@@ -127,3 +127,16 @@ The browser editor includes a local Media Bin backed by IndexedDB. It stores sel
 
 The package uses cineforge.project manifest version 2 while retaining renderer schema_version 1 for compatibility with the current Python renderer. Media provenance is descriptive metadata; it does not independently prove that a license is valid. Verify rights before publishing.
 
+
+
+## Project engine v2 and multi-track editor
+
+The browser project document uses the versioned contract cineforge.project@2. It stores project identity and revision, editable scene records, selected-scene state, story-planning context, and a normalized timeline with picture, voiceover and music tracks. The renderer job remains schema version 1: this preserves backward compatibility while the editor's project model evolves.
+
+- Project autosave prefers IndexedDB and falls back to localStorage when IndexedDB is unavailable or cannot be opened.
+- Revisions are checkpointed automatically; the latest 12 snapshots are retained per project for in-browser recovery.
+- Export the complete .cineforge.json project separately from the renderer job. ZIP project packages now include that full project document as well as the renderer job, media files and rights manifest.
+- The timeline renders independently timed picture, voiceover and music lanes. Drag picture clips to reorder scenes; select a picture clip to focus its scene. The current CPU renderer still accepts a sequential picture track and one full-length voiceover/music file, not arbitrary overlapping edits or multi-clip audio mixing.
+- project-engine.js exposes frame-snapped move, trim, split and remove operations with validation. Unsupported timeline arrangements are detected by the renderer-compatibility gate rather than silently flattened.
+
+The project engine and storage modules are dependency-free browser scripts with Node test coverage. Browser IndexedDB behavior and Android interaction still require a real-browser smoke test.
