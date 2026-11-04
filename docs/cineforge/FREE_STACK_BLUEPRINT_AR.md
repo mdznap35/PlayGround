@@ -60,6 +60,9 @@
 | الأداة | ما تقدمه | الترخيص/المتطلبات الموثقة | قرار CineForge |
 |---|---|---|---|
 | CogVideoX-2B | نص إلى فيديو، نموذج صغير نسبياً ضمن عائلة CogVideoX | النموذج 2B Apache 2.0؛ جدول Diffusers يذكر حداً أدنى منخفضاً للذاكرة مع تحسينات، والوثائق تحذر أن الاختبار ليس على كل GPU؛ مدخل النص إنجليزي | **أول تجربة سحابية**، لا اعتماد نهائي قبل اختبار الجودة |
+| Pyramid Flow miniFLUX | نص/صورة إلى فيديو؛ يعلن المشروع مخرجات حتى 10 ثوانٍ عند 768p/24fps | كود المشروع MIT وبطاقة checkpoint miniFLUX تحمل Apache 2.0؛ يدعم CPU offload ويذكر <8GB كمسار تسريع/تخفيف، لكنه يتطلب BF16 في مثال الاستدلال المنشور، لذا توافق GPU الفعلي مهم | **مرشح موازٍ قوي** إذا وفرت الجلسة GPU يدعم BF16؛ يلزم قياس حجم الأوزان بدقة قبل أي تنزيل |
+| Mochi 1 | نص إلى فيديو مع تركيز على الحركة الواقعية | الأوزان والكود Apache 2.0؛ النموذج 10B، المرجع الرسمي يذكر نحو 60GB VRAM على GPU واحد، وComfyUI يستطيع تخفيفه إلى أقل من 20GB بحسب مسار التشغيل؛ معاينة 480p مع تشوهات في الحالات الصعبة | **مستبعد من أول تجربة مجانية**؛ نحتفظ به كمرجع جودة/خيار لاحق فقط |
+| Stable Video Diffusion 1.1 | صورة إلى فيديو قصير | خدمة Stability API القديمة أُوقفت في 24 يوليو 2025؛ يبقى التشغيل الذاتي مع مراجعة اتفاقية Stability وشروط النموذج، وليس endpoint مجانياً جاهزاً | **ليس طريقاً سحابياً مجانياً جاهزاً**؛ مرجع I2V فقط إن توافرت GPU ورخصة واضحة |
 | Wan 2.2 TI2V-5B | نص/صورة إلى فيديو | Apache 2.0؛ أوزان المستودع نحو 34.2 GB | **مرشح المرحلة المتقدمة**؛ لا تنزيل الآن |
 | FramePack / FramePack-F1 | توليد ممتد مع إدارة ذاكرة | المستودع الرسمي يطلب NVIDIA RTX 30/40/50 وبحد أدنى منشور 6GB VRAM، Linux أو Windows | تجربة اختيارية فقط إذا وُجد GPU متوافق؛ Kaggle P100 ليس بطاقة RTX |
 | LTX-2.5 | فيديو وصوت متزامنان، نص/صورة/فيديو إلى مخرجات | أوزان 22B ومشفّر نص Gemma 4 12B؛ توثيق التدريب يوصي بـ80GB VRAM للإعداد القياسي و32GB لإعداد منخفض الذاكرة؛ ترخيص مجتمعي خاص لا Apache | **قوي لكن ثقيل**؛ مؤجل حتى وجود GPU كافٍ ومراجعة شروط الرخصة |
@@ -68,6 +71,11 @@
 
 روابط المصادر:
 - [CogVideoX الرسمي](https://github.com/zai-org/CogVideo)
+- [Pyramid Flow الرسمي](https://github.com/jy0205/Pyramid-Flow)
+- [Pyramid Flow miniFLUX model card — الترخيص والاستخدام والاستدلال](https://huggingface.co/rain1011/pyramid-flow-miniflux)
+- [Mochi 1 الرسمي — الترخيص والاحتياجات والقيود](https://github.com/genmoai/mochi)
+- [Stable Video Diffusion — حالة الوصول/الاستضافة الذاتية](https://kb.stability.ai/knowledge-base/how-to-access-stable-video-diffusion)
+- [Stability AI Community License](https://stability.ai/license)
 - [Wan 2.2 TI2V-5B — بطاقة النموذج وحجم الملفات](https://huggingface.co/Wan-AI/Wan2.2-TI2V-5B)
 - [FramePack الرسمي](https://github.com/lllyasviel/FramePack)
 - [LTX-2.5 — بطاقة النموذج](https://huggingface.co/Lightricks/LTX-2.5)
