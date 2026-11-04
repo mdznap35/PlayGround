@@ -115,3 +115,5 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - **No model weights have been downloaded. No AI video/image/TTS/ASR provider has been installed or connected.** The project still runs its existing Pillow + FFmpeg + FFprobe CPU pipeline.
 - GPU services are temporary and quota-bound; no unlimited or always-on free generation is promised. Render remains the static UI host. Proposed Cloudflare D1/R2/Workers storage is research only and is not configured.
 - Next engineering priorities: finish story-planner/editor round-trip and visible scene continuity; build Media Bin with source/license provenance; then execute the isolated GPU proof-of-concept only after presenting exact download sizes and receiving approval.
+
+- The expanded blueprint now also records Pyramid Flow miniFLUX (Apache-2.0 checkpoint; BF16 compatibility caveat), Mochi 1 (Apache-2.0 but high VRAM demand), Stable Video Diffusion (self-hosted path only after hosted API deprecation), FLUX.1-schnell, rembg, Real-ESRGAN, Stable Audio Open Small, and the non-commercial restriction on MusicGen weights. See the blueprint for links and qualification notes.
