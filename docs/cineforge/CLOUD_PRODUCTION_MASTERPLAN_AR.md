@@ -331,3 +331,31 @@ Android Browser
 - OpenTimelineIO: https://github.com/AcademySoftwareFoundation/OpenTimelineIO
 
 **القرار النهائي:** أفضل نظام مجاني ليس خادماً واحداً مجانياً؛ بل منظومة تتحمل انقطاع GPU، وتستفيد من جلسات GPU المجانية المتاحة، وتحفظ حالة كل مهمة وملفاتها، وتنتج الفيديو عبر FFmpeg، وتبقى قابلة للعمل حتى عند غياب الذكاء الاصطناعي.
+
+
+## تصحيح أسطول GPU — 2026-11-04
+
+التفاصيل التنفيذية الأحدث موجودة في [GPU_FLEET_STRATEGY_AR.md](./GPU_FLEET_STRATEGY_AR.md). هذا الملحق يحل محل الافتراضات القديمة في جدول الاستضافات أعلاه.
+
+- **Saturn Cloud:** صفحة المجاني تعلن 150 ساعة حوسبة شهرياً مع إمكانية GPU، لكنها لا تثبت أن الساعات كلها GPU-hours ولا تحدد بطاقة بعينها. لا نحتسبها كرصيد GPU قبل فحص لوحة الحساب.
+- **Kaggle:** تقاعد P100 في 15 سبتمبر 2026، وبقي خيار T4x2 المعلن؛ كل T4 لها 16GB منفصلة. رقم 30 ساعة أسبوعياً في دليل قديم ليس ضماناً بعد تغيير العتاد؛ لوحة الحساب هي المرجع.
+- **Google Colab Free:** GPU والحصة متغيران. الجلسة قد تصل إلى 12 ساعة، لكن المجاني مخصص للتفاعل داخل Notebook؛ لا نستخدم تعدد الحسابات للتحايل، أو distributed workers، أو Notebook كخدمة ويب/خلفية دائمة.
+- **Lightning AI:** الرصيد التمهيدي ليس حصة شهرية دائمة. نسجل ما يظهر فعلياً في الحساب؛ لا نضيف بطاقة دفع.
+- **Hugging Face ZeroGPU:** 5 GPU-minutes يومياً للحساب المجاني؛ نستخدمه لاختبار قصير أو Demo.
+- **Modal Starter:** 30 دولاراً من compute credits شهرياً للـFunctions/Sandboxes، وتشمل موارد GPU، لكن Shared Endpoints ليست مشمولة، وتجاوز الرصيد قد يؤدي إلى فوترة. لا نفعّله إلا بعد موافقة صريحة وحد إنفاق قابل للإنفاذ.
+- **Google Cloud Free Trial:** رصيد 300 دولار لا يتيح إضافة GPU إلى VM أثناء فترة Free Trial غير القابلة للفوترة، وGPU/TPU غير مدرجين في Free Tier.
+- **Paperspace:** الأسعار الحالية تعرض موارد GPU مدفوعة؛ لا يدخل في حصة المجاني الأساسية.
+- **SageMaker Studio Lab:** مغلق أمام العملاء الجدد؛ لا نعتمد عليه لحساب جديد.
+
+نميز بين Notebook handoff وبين عامل Serverless. Colab وKaggle يكونان جلسات يبدأها المستخدم، أما التوجيه الآلي فيقتصر على adapters تسمح شروط مزودها بالأتمتة. ولا ندمج VRAM بطاقات منفصلة أو موارد مزودين مختلفين. لكل مهمة مفتاح idempotency ونقطة حفظ وملف QA؛ عند انتهاء الجلسة نكمل اللقطات غير المنجزة فقط.
+
+مصادر رسمية:
+- Saturn: https://saturncloud.io/try/
+- Kaggle: https://www.kaggle.com/product-announcements/735239
+- Colab: https://research.google.com/colaboratory/faq.html
+- Lightning: https://lightning.ai/pricing
+- ZeroGPU: https://huggingface.co/docs/hub/spaces-zerogpu
+- Modal: https://modal.com/pricing
+- Google Cloud: https://docs.cloud.google.com/free/docs/free-cloud-features
+- Paperspace: https://www.paperspace.com/pricing?tab=gradient-plans
+- SageMaker Studio Lab: https://docs.aws.amazon.com/sagemaker/latest/dg/studio-lab-overview.html
