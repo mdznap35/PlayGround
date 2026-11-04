@@ -625,7 +625,7 @@
       const jobRoot = "apps/cineforge-studio/jobs/";
       const entries = [
         {name:jobRoot + slug + ".json",data:JSON.stringify(job,null,2) + "\n"},
-        {name:jobRoot + "media-manifest-" + slug + ".json",data:JSON.stringify({
+        {name:"apps/cineforge-studio/media-manifests/media-manifest-" + slug + ".json",data:JSON.stringify({
           schema:"cineforge.media-manifest",schema_version:1,project_title:job.title,assets:manifestAssets
         },null,2) + "\n"},
         {name:"CINEFORGE-PACKAGE-README.txt",data:

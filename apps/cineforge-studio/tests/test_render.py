@@ -45,6 +45,19 @@ class JobValidationTests(unittest.TestCase):
         self.assertEqual(result["story_context"]["audience"], "طلاب المدارس")
         self.assertEqual(result["story_context"]["characters"][0]["notes"], "معطف أزرق")
 
+    def test_project_and_media_manifest_metadata_is_preserved(self):
+        job = sample_job()
+        job["project_manifest"] = {"schema": "cineforge.project", "schema_version": 2, "asset_count": 1}
+        job["media_manifest"] = [{
+            "id": "asset-test", "kind": "image", "project_path": "assets/asset-test-shot.png",
+            "source_type": "licensed", "license": "CC BY 4.0", "sha256": "a" * 64
+        }]
+        result = validate_job(job)
+        self.assertEqual(result["schema_version"], 1)
+        self.assertEqual(result["project_manifest"]["schema_version"], 2)
+        self.assertEqual(result["media_manifest"][0]["license"], "CC BY 4.0")
+        self.assertEqual(result["media_manifest"][0]["sha256"], "a" * 64)
+
     def test_legacy_audio_file_in_jobs_root_remains_compatible(self):
         job = sample_job()
         job["audio_file"] = "narration.mp3"

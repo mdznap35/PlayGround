@@ -122,7 +122,7 @@ The browser editor includes a local Media Bin backed by IndexedDB. It stores sel
 - Limits: 128 MiB per file, 512 MiB in the local library, 500 items, and 160 MiB per ZIP package. Browser storage quotas still apply.
 - The library is local to the browser. It is not automatically uploaded or synchronized to Render, GitHub, or a cloud bucket.
 - Assign an image to the selected scene or audio to the voiceover/music fields. Then use the ZIP project package action to export the render job, media files, and provenance manifest together.
-- Extract the ZIP at the repository root and preserve its paths. The job JSON and files are placed under apps/cineforge-studio/jobs/; commit them together before running the render workflow.
+- Extract the ZIP at the repository root and preserve its paths. The render job and media bytes are placed under apps/cineforge-studio/jobs/. The separate manifest is placed under apps/cineforge-studio/media-manifests/ so it cannot be mistaken for a render job. Commit the job and its media files together before running the render workflow.
 - A standalone JSON export does not contain the actual media bytes. Use the ZIP package when the render must be self-contained.
 
 The package uses cineforge.project manifest version 2 while retaining renderer schema_version 1 for compatibility with the current Python renderer. Media provenance is descriptive metadata; it does not independently prove that a license is valid. Verify rights before publishing.

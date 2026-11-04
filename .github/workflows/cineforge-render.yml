@@ -91,17 +91,28 @@ jobs:
           for commit in payload.get("commits", []):
               for key in ("added", "modified"):
                   candidates.extend(p for p in commit.get(key, []) if p.startswith("apps/cineforge-studio/jobs/") and p.endswith(".json"))
-          print(candidates[-1] if candidates else "")
+          valid_jobs = []
+          for candidate in candidates:
+              try:
+                  document = json.load(open(candidate, encoding="utf-8"))
+                  if isinstance(document, dict) and document.get("schema_version") == 1 and isinstance(document.get("scenes"), list):
+                      valid_jobs.append(candidate)
+              except (OSError, ValueError):
+                  continue
+          print(valid_jobs[-1] if valid_jobs else "")
           PY
           )"
             if [ -z "$JOB_FILE" ]; then JOB_FILE="apps/cineforge-studio/jobs/demo.json"; fi
           fi
           JOB_FILE="$(python - "$JOB_FILE" <<'PY'
-          import pathlib, sys
+          import json, pathlib, sys
           root = pathlib.Path("apps/cineforge-studio/jobs").resolve()
           candidate = pathlib.Path(sys.argv[1]).resolve()
           if root not in candidate.parents or candidate.suffix.lower() != ".json" or not candidate.is_file():
               raise SystemExit("Rejected job file: it must be an existing JSON file inside apps/cineforge-studio/jobs/")
+          document = json.loads(candidate.read_text(encoding="utf-8"))
+          if not isinstance(document, dict) or document.get("schema_version") != 1 or not isinstance(document.get("scenes"), list):
+              raise SystemExit("Rejected job file: expected renderer schema_version 1 and a scenes array.")
           print(candidate.relative_to(pathlib.Path.cwd()))
           PY
           )"
