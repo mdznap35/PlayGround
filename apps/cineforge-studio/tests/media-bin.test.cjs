@@ -1,0 +1,52 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const media = require("../media-bin.js");
+
+test("classifies only renderer-supported images, audio and known video formats", () => {
+  assert.equal(media.inferKind("frame.final.WEBP"), "image");
+  assert.equal(media.inferKind("narration.m4a"), "audio");
+  assert.equal(media.inferKind("shot-01.mp4"), "video");
+  assert.throws(() => media.inferKind("notes.exe"), /غير مدعوم/);
+});
+
+test("builds stable renderer-relative asset paths without unsafe path segments", () => {
+  const asset = { id:"12345678-aaaa-bbbb", name:"لقطة / النجوم.webp", kind:"image", source_type:"generated" };
+  assert.match(media.projectPath(asset), /^assets\/12345678-/);
+  assert.ok(media.projectPath({ ...asset, kind:"audio", name:"voice.wav" }).startsWith("audio/"));
+  assert.throws(() => media.projectPath({ ...asset, kind:"other" }), /غير مدعومة/);
+});
+
+test("rejects absolute paths and traversal attempts in ZIP entries", () => {
+  assert.equal(media.validateArchivePath("apps/cineforge-studio/jobs/assets/frame.png"), "apps/cineforge-studio/jobs/assets/frame.png");
+  for (const path of ["../secret.txt", "/etc/passwd", "C:/secret.txt", "jobs/../../secret", "jobs\\\\secret.txt", "jobs//empty.txt"]) {
+    assert.throws(() => media.validateArchivePath(path));
+  }
+});
+
+test("CRC32 matches the standard check vector", () => {
+  assert.equal(media.crc32("123456789"), 0xcbf43926);
+});
+
+test("creates a valid ZIP32 archive with UTF-8 names and an end record", async () => {
+  const zip = await media.buildZip([
+    { name:"project.json", data:"{}" },
+    { name:"assets/لقطة.txt", data:"cinema" }
+  ]);
+  const bytes = new Uint8Array(await zip.arrayBuffer());
+  const view = new DataView(bytes.buffer);
+  assert.equal(view.getUint32(0,true), 0x04034b50);
+  assert.equal(view.getUint32(bytes.length-22,true), 0x06054b50);
+  assert.equal(view.getUint16(bytes.length-14,true), 2);
+  assert.equal(zip.type, "application/zip");
+});
+
+test("rejects duplicate names and archive path traversal", async () => {
+  await assert.rejects(() => media.buildZip([
+    {name:"same.json",data:"1"},{name:"same.json",data:"2"}
+  ]), /مكرر/);
+  await assert.rejects(() => media.buildZip([{name:"../bad.json",data:"x"}]), /مسار/);
+});
+
+test("enforces the archive byte budget before returning a ZIP", async () => {
+  await assert.rejects(() => media.buildZip([{name:"large.bin",data:new Uint8Array(20)}],{maxBytes:10}), /يتجاوز/);
+});

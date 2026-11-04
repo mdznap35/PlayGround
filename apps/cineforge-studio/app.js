@@ -5,6 +5,8 @@
   const STORAGE_KEY = "cineforge-studio-project-v1";
   const storyPlanImporter = window.CineForgeStoryPlanImporter;
   const narrationFit = window.CineForgeNarrationFit;
+  const mediaBin = window.CineForgeMediaBin;
+  if (!mediaBin) throw new Error("CineForge Media Bin failed to load.");
   if (!storyPlanImporter) throw new Error("CineForge Story Plan importer failed to load.");
   if (!narrationFit) throw new Error("CineForge narration-fit analyzer failed to load.");
   let importedStoryPlan = null;
@@ -27,6 +29,7 @@
   let scenes = [];
   let selectedScene = 0;
   let saveTimer = null;
+  let mediaPreviewUrls = [];
 
   const defaultProject = () => ({
     version: 1,
@@ -413,6 +416,239 @@
     } catch (error) { alert(error.message); }
   }
 
+
+  function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  }
+
+  function mediaKindLabel(kind) {
+    return ({image:"صورة",audio:"صوت",video:"فيديو"})[kind] || "ملف";
+  }
+
+  function createMediaButton(label, className, handler) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className || "tiny-button";
+    button.textContent = label;
+    button.addEventListener("click", event => {
+      event.stopPropagation();
+      Promise.resolve(handler()).catch(error => alert(error.message || "تعذّر تنفيذ العملية."));
+    });
+    return button;
+  }
+
+  async function refreshMediaBin() {
+    const grid = $("mediaGrid");
+    mediaPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    mediaPreviewUrls = [];
+    try {
+      const items = await mediaBin.list();
+      const usage = await mediaBin.usage();
+      $("mediaStats").textContent = items.length + " ملف · " + formatBytes(usage.bytes) + " مستخدمة من " + formatBytes(usage.maxBytes) + " · محفوظة على هذا المتصفح";
+      grid.replaceChildren();
+      if (!items.length) {
+        const empty = document.createElement("div");
+        empty.className = "media-empty";
+        empty.textContent = "المكتبة فارغة حالياً. أضف صوراً أو ملفات صوتية أو فيديو للبدء.";
+        grid.append(empty);
+        return;
+      }
+      for (const item of items) {
+        const card = document.createElement("article");
+        card.className = "media-card";
+        const visual = document.createElement("div");
+        visual.className = "media-card-visual";
+        visual.textContent = item.kind === "image" ? "▧" : item.kind === "audio" ? "♫" : "▶";
+        if (item.kind === "image" && item.size <= 12 * 1024 * 1024) {
+          const stored = await mediaBin.get(item.id);
+          if (stored && stored.blob) {
+            const url = URL.createObjectURL(stored.blob);
+            mediaPreviewUrls.push(url);
+            const image = document.createElement("img");
+            image.src = url;
+            image.alt = item.name;
+            image.loading = "lazy";
+            visual.replaceChildren(image);
+          }
+        }
+        const body = document.createElement("div");
+        body.className = "media-card-body";
+        const title = document.createElement("strong");
+        title.className = "media-card-title";
+        title.textContent = item.name;
+        title.title = item.name;
+        const detail = document.createElement("span");
+        detail.className = "media-card-detail";
+        detail.textContent = mediaKindLabel(item.kind) + " · " + formatBytes(item.size);
+        const origin = document.createElement("span");
+        origin.className = "media-card-origin";
+        const sourceLabels = {user:"من إنشائي",generated:"مولّد",open_license:"ترخيص مفتوح",licensed:"مرخّص",unknown:"غير متحقق"};
+        origin.textContent = (sourceLabels[item.source_type] || "غير متحقق") + " · " + (item.license || "غير محدد");
+        const hash = document.createElement("code");
+        hash.className = "media-hash";
+        hash.textContent = item.sha256 ? "SHA-256 " + item.sha256.slice(0,16) + "…" : "تعذّر إنشاء بصمة SHA-256";
+        body.append(title, detail, origin, hash);
+        const actions = document.createElement("div");
+        actions.className = "media-card-actions";
+        if (item.kind === "image") {
+          actions.append(createMediaButton("تعيين للمشهد المحدد","media-action",()=>assignMedia(item.id,"image")));
+        } else if (item.kind === "audio") {
+          actions.append(
+            createMediaButton("تعليق صوتي","media-action",()=>assignMedia(item.id,"voiceover")),
+            createMediaButton("موسيقى","media-action",()=>assignMedia(item.id,"music"))
+          );
+        } else {
+          const note = document.createElement("span");
+          note.className = "media-future-note";
+          note.textContent = "محفوظ · مسار الفيديو غير مدمج في الرندر الحالي";
+          actions.append(note);
+        }
+        actions.append(createMediaButton("حذف","media-delete",()=>removeMedia(item)));
+        card.append(visual,body,actions);
+        grid.append(card);
+      }
+    } catch (error) {
+      $("mediaStats").textContent = "المكتبة غير متاحة";
+      grid.replaceChildren();
+      const message = document.createElement("div");
+      message.className = "media-empty media-error";
+      message.textContent = error.message || "تعذّر فتح مكتبة الوسائط.";
+      grid.append(message);
+    }
+  }
+
+  async function addSelectedMediaFiles() {
+    const input = $("mediaFiles");
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    if (files.length > 20) {
+      alert("أضف 20 ملفاً كحد أقصى في الدفعة الواحدة.");
+      input.value = "";
+      return;
+    }
+    const metadata = {
+      source_type: $("assetSourceType").value,
+      source_ref: $("assetSourceRef").value,
+      license: $("assetLicense").value,
+      notes: $("assetNotes").value
+    };
+    let added = 0;
+    const errors = [];
+    for (const file of files) {
+      try {
+        await mediaBin.add(file, metadata);
+        added++;
+      } catch (error) {
+        errors.push(file.name + ": " + (error.message || "فشل الإضافة"));
+      }
+    }
+    input.value = "";
+    await refreshMediaBin();
+    setSavedState("تمت إضافة " + added + " ملف إلى المكتبة");
+    if (errors.length) alert("أُضيف " + added + " ملف. تعذّرت إضافة بعض الملفات:\n" + errors.slice(0,8).join("\n"));
+  }
+
+  async function assignMedia(id, target) {
+    const asset = await mediaBin.get(id);
+    if (!asset) throw new Error("لم يعد الملف موجوداً في المكتبة.");
+    const path = mediaBin.projectPath(asset);
+    if (target === "image") {
+      if (!scenes[selectedScene]) throw new Error("أنشئ المشاهد أولاً ثم اختر المشهد المطلوب.");
+      scenes[selectedScene].image_file = path;
+      renderAll();
+    } else if (target === "voiceover") {
+      $("voiceoverFile").value = path;
+    } else if (target === "music") {
+      $("musicFile").value = path;
+    }
+    scheduleSave();
+    setSavedState("تم ربط " + asset.name + " بالمشروع");
+  }
+
+  async function removeMedia(item) {
+    const path = mediaBin.projectPath(item);
+    const referenced = scenes.some(scene => scene.image_file === path) ||
+      $("voiceoverFile").value.trim() === path || $("musicFile").value.trim() === path;
+    if (referenced) {
+      alert("لا يمكن حذف هذا الملف لأنه مستخدم في المشروع. أزل ارتباطه من المشهد أو مسار الصوت أولاً.");
+      return;
+    }
+    if (!confirm("حذف " + item.name + " من مكتبة هذا المتصفح؟")) return;
+    await mediaBin.remove(item.id);
+    await refreshMediaBin();
+    setSavedState("تم حذف الملف من المكتبة");
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  async function downloadProjectPackage() {
+    try {
+      const records = await mediaBin.list();
+      const job = buildJob();
+      const paths = new Map(records.map(item => [mediaBin.projectPath(item), item]));
+      const referencedPaths = [
+        ...job.scenes.map(scene => scene.image_file).filter(Boolean),
+        job.voiceover_file,
+        job.music_file
+      ].filter(Boolean);
+      const missing = [...new Set(referencedPaths.filter(path => !paths.has(path)))];
+      if (missing.length) {
+        throw new Error("الحزمة لن تكون مكتملة. أضف هذه الملفات إلى مكتبة الوسائط ثم أعد ربطها:\n" + missing.slice(0,8).join("\n"));
+      }
+      const slug = (job.title || "cineforge").normalize("NFKC")
+        .replace(/[^\p{L}\p{N}-]+/gu,"-").replace(/^-|-$/g,"").slice(0,48) || "cineforge";
+      const manifestAssets = records.map(item => ({
+        id:item.id, name:item.name, kind:item.kind, mime:item.mime, size:item.size,
+        sha256:item.sha256, source_type:item.source_type, source_ref:item.source_ref,
+        license:item.license, notes:item.notes, created_at:item.created_at,
+        project_path:mediaBin.projectPath(item)
+      }));
+      job.project_manifest = {
+        schema:"cineforge.project",
+        schema_version:2,
+        created_at:new Date().toISOString(),
+        renderer_job_schema_version:1,
+        asset_count:manifestAssets.length
+      };
+      job.media_manifest = manifestAssets;
+      const jobRoot = "apps/cineforge-studio/jobs/";
+      const entries = [
+        {name:jobRoot + slug + ".json",data:JSON.stringify(job,null,2) + "\n"},
+        {name:jobRoot + "media-manifest-" + slug + ".json",data:JSON.stringify({
+          schema:"cineforge.media-manifest",schema_version:1,project_title:job.title,assets:manifestAssets
+        },null,2) + "\n"},
+        {name:"CINEFORGE-PACKAGE-README.txt",data:
+          "CineForge project package\n\n" +
+          "Extract this ZIP at the repository root and preserve the folder structure.\n" +
+          "The render job is under apps/cineforge-studio/jobs/.\n" +
+          "Media paths in the job are relative to that jobs/ folder.\n" +
+          "Commit the JSON and its assets/audio files together before running the CineForge workflow.\n" +
+          "This package contains local media copies and their provenance metadata.\n"}
+      ];
+      for (const item of records) {
+        const stored = await mediaBin.get(item.id);
+        if (!stored || !stored.blob) throw new Error("الملف مفقود من التخزين المحلي: " + item.name);
+        entries.push({name:jobRoot + mediaBin.projectPath(item),data:stored.blob});
+      }
+      const zip = await mediaBin.buildZip(entries);
+      downloadBlob(zip,"cineforge-" + slug + "-project.zip");
+      setSavedState("تم إنشاء حزمة المشروع");
+    } catch (error) {
+      alert("تعذّر إنشاء حزمة المشروع:\n" + (error.message || "خطأ غير معروف"));
+    }
+  }
+
   function updateMusicVolumeLabel() {
     $("musicVolumeValue").textContent = Math.round(Number($("musicVolume").value) * 100) + "%";
   }
@@ -477,6 +713,9 @@
   });
   $("addSceneButton").addEventListener("click", addScene);
   $("downloadButton").addEventListener("click", downloadJob);
+  $("downloadPackageButton").addEventListener("click", downloadProjectPackage);
+  $("mediaFiles").addEventListener("change", addSelectedMediaFiles);
+  $("addMediaButton").addEventListener("click", () => $("mediaFiles").click());
   $("printButton").addEventListener("click", () => window.print());
   $("helpButton").addEventListener("click", () => $("helpDialog").showModal());
   $("closeHelp").addEventListener("click", () => $("helpDialog").close());
@@ -488,4 +727,5 @@
 
   if (!restoreState()) importDemo();
   renderAll();
+  refreshMediaBin();
 })();

@@ -45,6 +45,7 @@
         <div class="rail-label">WORKSPACE</div>
         <a class="rail-link active" href="#projectPanel"><span class="rail-icon">✳</span><span>المشروع</span></a>
         <a class="rail-link" href="#storyboardPanel"><span class="rail-icon">▤</span><span>لوحة المشاهد</span></a>
+          <a class="rail-link" href="#mediaBinPanel"><span class="rail-icon">▧</span><span>مكتبة الوسائط</span></a>
         <a class="rail-link" href="./story-planner.html"><span class="rail-icon">✧</span><span>مخطط القصة</span></a>
         <a class="rail-link" href="#exportPanel"><span class="rail-icon">↗</span><span>التصدير</span></a>
         <div class="rail-bottom"><span class="rail-version">BUILD 0.2.0</span><span class="rail-status"><b></b> CORE READY</span></div>
@@ -99,9 +100,37 @@
           </div>
         </section>
 
+
+        <section class="panel media-bin-panel" id="mediaBinPanel">
+          <div class="panel-heading">
+            <div><span class="section-index">03 / MEDIA ASSET LIBRARY</span><h2>مكتبة الوسائط</h2></div>
+            <span class="panel-tag">LOCAL · INDEXEDDB</span>
+          </div>
+          <p class="media-intro">أضف صورك وصوتك ومقاطعك إلى مكتبة هذا المتصفح. نحفظ بصمة كل ملف ومصدره وترخيصه، ويمكن تعيين الصور للمشهد المحدد والصوت لمسارات المشروع.</p>
+          <div class="media-ingest-grid">
+            <label class="media-field media-files-field"><span>ملفات الوسائط</span><input id="mediaFiles" type="file" accept=".png,.jpg,.jpeg,.webp,.mp3,.wav,.m4a,.ogg,.aac,.flac,.mp4,.mov,.webm,.mkv" multiple></label>
+            <label class="media-field"><span>نوع المصدر</span><select id="assetSourceType">
+              <option value="user">ملفي الشخصي / من إنشائي</option>
+              <option value="generated">مولّد بالذكاء الاصطناعي</option>
+              <option value="open_license">ترخيص مفتوح</option>
+              <option value="licensed">مرخّص / بإذن</option>
+              <option value="unknown" selected>غير معروف / يحتاج تحققاً</option>
+            </select></label>
+            <label class="media-field"><span>المصدر أو رابط الأصل</span><input id="assetSourceRef" maxlength="500" placeholder="رابط المصدر أو وصف مكان الحصول عليه"></label>
+            <label class="media-field"><span>الترخيص أو الإذن</span><input id="assetLicense" maxlength="180" value="غير محدد" placeholder="مثلاً: CC BY 4.0 أو إذن صاحب الملف"></label>
+            <label class="media-field media-notes-field"><span>ملاحظات الحقوق والاستمرارية</span><textarea id="assetNotes" maxlength="1000" rows="2" placeholder="ما الذي يجب معرفته عن هذا الملف؟"></textarea></label>
+          </div>
+          <div class="media-toolbar">
+            <button class="primary-button" id="addMediaButton" type="button"><span>إضافة الملفات إلى المكتبة</span><b>＋</b></button>
+            <span id="mediaStats" class="media-stats" role="status">جارٍ فتح المكتبة المحلية…</span>
+          </div>
+          <div id="mediaGrid" class="media-grid" aria-live="polite"><div class="media-empty">ستظهر الملفات التي تضيفها هنا.</div></div>
+          <p class="media-footnote">الحد الحالي: 128 MB للملف، و512 MB للمكتبة، و160 MB للحزمة الواحدة. المكتبة محلية لهذا المتصفح ولا تُرفع تلقائياً إلى GitHub أو أي خدمة سحابية.</p>
+        </section>
+
         <section class="panel export-panel" id="exportPanel">
           <div class="panel-heading">
-            <div><span class="section-index">03 / DELIVERY PIPELINE</span><h2>إنتاج وتصدير</h2></div>
+            <div><span class="section-index">04 / DELIVERY PIPELINE</span><h2>إنتاج وتصدير</h2></div>
             <span class="engine-badge"><b></b> CPU RENDERER</span>
           </div>
           <div class="pipeline-grid">
@@ -111,12 +140,13 @@
           </div>
           <div class="export-notice"><span class="notice-icon">i</span><p><strong>توضيح مهم:</strong> المحرك الحالي يصنع فيديوهات Motion Graphics متحركة من المشاهد والنصوص. لا يدّعي توليد لقطات واقعية بالذكاء الاصطناعي. لا يحتاج تنزيل نماذج أو GPU.</p></div>
           <div class="export-actions">
-            <button class="secondary-button" id="downloadButton" type="button"><span>تنزيل ملف المشروع JSON</span><b>↓</b></button>
+            <button class="secondary-button" id="downloadButton" type="button"><span>تنزيل وصف JSON</span><b>↓</b></button>
+            <button class="primary-button" id="downloadPackageButton" type="button"><span>تنزيل حزمة المشروع ZIP</span><b>↓</b></button>
             <button class="primary-button" id="printButton" type="button"><span>طباعة لوحة القصة</span><b>↗</b></button>
           </div>
           <div class="next-instructions">
             <span class="section-index">NEXT STEP / CLOUD RENDER</span>
-            <ol><li>نزّل ملف JSON.</li><li>ارفع الصور إلى <code>jobs/assets/</code> والصوت إلى <code>jobs/audio/</code>.</li><li>ارفع ملف JSON إلى <code>jobs/</code> ثم شغّل سير العمل من Actions.</li><li>نزّل MP4 وتقرير الفحص من Artifact الناتج.</li></ol>
+            <ol><li>نزّل حزمة ZIP الكاملة وفك ضغطها من جذر المستودع مع الحفاظ على المجلدات.</li><li>راجع ملفات المشروع والأصول في <code>apps/cineforge-studio/jobs/</code>.</li><li>ارفع ملفات الحزمة إلى المستودع ثم شغّل سير العمل من Actions.</li><li>نزّل MP4 وتقرير الفحص من Artifact الناتج.</li></ol>
             <a href="https://github.com/mdznap35/PlayGround/actions" target="_blank" rel="noopener">فتح GitHub Actions <span>↗</span></a>
           </div>
         </section>
@@ -133,6 +163,7 @@
     <p class="dialog-note">المعالجة الحالية قائمة على Motion Graphics. توليد لقطات AI واقعية يحتاج موصل GPU منفصلاً، وهو غير مفعّل في هذا الإصدار.</p>
   </dialog>
   <script src="./story-plan-import.js" defer></script>
+  <script src="./media-bin.js" defer></script>
   <script src="./narration-fit.js" defer></script>
   <script src="./app.js" defer></script>
 </body>

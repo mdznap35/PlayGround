@@ -137,3 +137,16 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Commits: strategy doc `(see branch history)`; preflight `88d2af0d8ea105290c1864a277382dd33dc39ba1`; tests `2416ac35eabea5d0b77b9aaacc7be1f2fa8bf76c`.
 - Local verification reported four unit tests passing. GitHub Actions status for the latest test commit has not yet returned a workflow run through the available PR-run endpoint; do not claim CI passed.
 - No GPU provider has been connected or run. No model weights downloaded. No paid resources activated. No PR merge.
+
+
+## Media Bin + portable project package increment — 2026-11-04
+
+- Added apps/cineforge-studio/media-bin.js: IndexedDB-backed local asset library with image/audio/video type detection, SHA-256 fingerprints when Web Crypto is available, source/license/notes metadata, per-file/library/count limits, safe renderer-relative asset paths, and a dependency-free ZIP32 writer.
+- Integrated the Media Bin into the Arabic browser editor: local file ingestion, item listing, bounded image previews, image assignment to the selected scene, audio assignment to voiceover/music, and protection against deleting assets currently referenced by the project.
+- Added full project ZIP export: renderer job JSON, media files, a provenance manifest, and extraction instructions. Package output preserves apps/cineforge-studio/jobs/ structure and uses renderer-relative assets/, audio/, and video/ paths.
+- The ZIP exporter refuses to produce an incomplete package when a job references files not present in the local Media Bin. Current video files are catalogued and packaged but are not yet consumed by the CPU renderer.
+- Limits currently enforced: 128 MiB per file; 512 MiB total browser library; 500 assets; 160 MiB per exported ZIP. IndexedDB quota varies by browser/device.
+- Added Node tests for file classification, safe paths, path traversal rejection, CRC32, ZIP32 structure, duplicate names and archive size limits. CI now syntax-checks media-bin.js.
+- The Media Bin is local browser storage, not cloud synchronization. No R2/D1/Worker deployed, no AI model weights downloaded, no GPU provider connected, no paid resources activated.
+- Verification status for this increment must be taken from the exact-head GitHub Actions run; a successful ZIP unit test does not replace browser/Android persistence testing.
+

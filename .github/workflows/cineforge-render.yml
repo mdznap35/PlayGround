@@ -66,6 +66,7 @@ jobs:
           node --check apps/cineforge-studio/app.js
           node --check apps/cineforge-studio/story-planner.js
           node --check apps/cineforge-studio/story-plan-import.js
+          node --check apps/cineforge-studio/media-bin.js
 
       - name: Test story-plan importer
         run: node --test apps/cineforge-studio/tests/*.test.cjs
