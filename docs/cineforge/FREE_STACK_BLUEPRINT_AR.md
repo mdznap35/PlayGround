@@ -88,11 +88,19 @@
 ### B. الصور والمرئيات
 
 - **ComfyUI:** طبقة تشغيل وربط الرسوم البيانية للنماذج؛ تدعم تدفقات صورة وفيديو، لكن تنفيذ النماذج نفسه يحتاج GPU. ترخيص التطبيق GPL-3.0، ولذلك نستخدمه كخدمة/بيئة منفصلة ونراجع التزامات التوزيع قبل تضمين أي أجزاء منه داخل التطبيق.
+- **FLUX.1-schnell:** مرشح لتوليد الصور/الإطارات المرجعية بجودة عالية؛ 12B parameters، بطاقة النموذج تنص على Apache 2.0 و1–4 خطوات توليد، لكنه ثقيل على الحصص المجانية الصغيرة. نختبره فقط على GPU مشترك بعد فحص الذاكرة وحجم الملفات، وليس على الهاتف مباشرة. [البطاقة الرسمية](https://huggingface.co/black-forest-labs/FLUX.1-schnell).
+- **rembg:** أداة MIT لإزالة خلفية الصور؛ مفيدة لصناعة cutouts للشخصيات والعناصر والملصقات. البرنامج صغير نسبياً لكن أوزان segmentation تُحمّل منفصلة، ولكل نموذج حجم وذاكرة يجب قياسهما قبل التفعيل. [المستودع الرسمي](https://github.com/danielgatis/rembg).
+- **Real-ESRGAN:** ترقية دقة الصور واستعادة بعض التفاصيل؛ مستودع BSD-3-Clause. نستخدمه اختيارياً على العامل السحابي فقط إذا كانت الصورة تحتاج تكبيراً، ولا نضخمه داخل واجهة الهاتف. [المستودع الرسمي](https://github.com/xinntao/Real-ESRGAN).
 - **Openverse:** محرك بحث للوسائط المفتوحة الترخيص. لا نعرض نتيجة قبل تسجيل رابط الأصل والمؤلف ونوع الرخصة والتحقق من ملاءمتها.
 - **Pexels API:** صور وفيديو مجانية عبر API؛ الحدود الافتراضية 200 طلب/ساعة و20,000 طلب/شهر، مع وجوب إظهار رابط Pexels وإسناد المصور متى أمكن. شروطه تمنع إعادة إنتاج الوظيفة الأساسية لموقع Pexels. نستخدمه للعثور على أصول مرتبطة بمشهد داخل استوديو إنتاج، لا لإنشاء موقع صور منافس.
 - **Wikimedia Commons:** مصدر إضافي للمحتوى الحر، لكن الترخيص يختلف لكل ملف؛ يسجّل كل أصل على حدة.
 
 المراجع:
+- [FLUX.1-schnell model card — Apache 2.0 / 12B parameters](https://huggingface.co/black-forest-labs/FLUX.1-schnell)
+- [rembg — MIT](https://github.com/danielgatis/rembg)
+- [Real-ESRGAN — BSD-3-Clause](https://github.com/xinntao/Real-ESRGAN)
+- [Stable Audio Open Small official announcement](https://stability.ai/news-updates/stability-ai-and-arm-release-stable-audio-open-small-enabling-real-world-deployment-on-device-audio-control)
+- [AudioCraft code/weights licenses](https://github.com/facebookresearch/audiocraft)
 - [Openverse](https://docs.openverse.org/)
 - [Pexels API docs](https://www.pexels.com/api/documentation/)
 - [Pexels API limits](https://help.pexels.com/hc/en-us/articles/47677890260761-Is-the-Pexels-API-free-to-use)
@@ -108,6 +116,8 @@
 | Piper TTS | تحويل النص إلى كلام | يحتوي على صوت عربي أردني ar_JO؛ البرنامج GPL-3.0-or-later، ورخصة كل صوت قد تختلف ويجب فحص MODEL_CARD الخاص بالصوت | **مرشح بعد تدقيق ترخيص الصوت واختبار النطق** |
 | Web Speech API | صوت تجريبي في المتصفح | الأصوات تعتمد على الجهاز والمتصفح ولا نضمن وجود صوت عربي موحد | fallback ومعاينة فقط |
 | Freesound API | مؤثرات صوتية وأجواء | API v2 يدعم البحث والتفاصيل؛ ترخيص كل ملف يختلف ويجب إظهار المؤلف والرخصة | **مكتبة مؤثرات** |
+| Stable Audio Open Small | توليد مؤثرات وأجواء ومقاطع صوت قصيرة من الوصف | نموذج 341M محسّن لمعالجات Arm؛ Stability AI تقول إنه يستهدف حتى 11 ثانية على هاتف في أقل من 8 ثوانٍ، وتضعه تحت Community License المجتمعية. هذا ادعاء مختبر/معلن من الشركة وليس ضمان أداء على Galaxy A15؛ يلزم اختبار RAM وحرارة ووقت التنفيذ ورخصة الاستخدام قبل تفعيله | **مرشح صوتي مميز لاختبار لاحق على ARM/سحابة** |
+| MusicGen / AudioCraft | توليد موسيقى من النص أو اللحن | كود AudioCraft MIT لكن أوزان النماذج CC-BY-NC 4.0، لذا لا نستخدمها كخيار افتراضي لإنتاج تجاري أو توزيع غير تجاري واضح الحقوق | **مستبعد من خط الإنتاج الأساسي**؛ ممكن بحثياً فقط مع الالتزام بقيود الأوزان |
 | FFmpeg filters | مزج ومعالجة وتطبيع الصوت | فلاتر مثل loudnorm وsidechaincompress موجودة في FFmpeg | **إدماج مباشر في محرك الرندر** |
 | pyannote.audio | فصل المتحدثين وتحديد تغيّر الصوت | المفتوح المصدر متاح، لكنه يعتمد على PyTorch ونماذج/أوزان وموارد GPU؛ بعض المسارات التجارية خدمة مدفوعة | مؤجل إلى ما بعد ASR الأساسي |
 
