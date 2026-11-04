@@ -107,3 +107,11 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Workflow #23 [passed](https://github.com/mdznap35/PlayGround/actions/runs/41698307092): JavaScript syntax, all 14 Node tests, all 20 Python tests, sample MP4 render, FFprobe inspection and artifact upload succeeded.
 - The engine evaluation document was added in commit `0b625c4` and linked from the README and master roadmap. The README/roadmap updates are documentation-only. Render auto-deploys on every commit; current deploy status must be checked independently. A live static deploy never substitutes for the Android interaction smoke test.
 - The next increment is browser round-trip coverage and direct scene display of narrative role/purpose/continuity. The Android smoke test still requires a real device/browser interaction.
+
+
+## Free-stack architecture research — 2026-11-04
+- Added [FREE_STACK_BLUEPRINT_AR.md](./FREE_STACK_BLUEPRINT_AR.md), a detailed Arabic architecture and staged implementation plan covering video/image/audio engines, free GPU session options, storage, adapter contracts, licensing, cost controls and acceptance criteria.
+- First real video-generation proof-of-concept is tracked in [Issue #20](https://github.com/mdznap35/PlayGround/issues/20): CogVideoX-2B on a user-launched free cloud GPU session, subject to runtime hardware/quota checks.
+- **No model weights have been downloaded. No AI video/image/TTS/ASR provider has been installed or connected.** The project still runs its existing Pillow + FFmpeg + FFprobe CPU pipeline.
+- GPU services are temporary and quota-bound; no unlimited or always-on free generation is promised. Render remains the static UI host. Proposed Cloudflare D1/R2/Workers storage is research only and is not configured.
+- Next engineering priorities: finish story-planner/editor round-trip and visible scene continuity; build Media Bin with source/license provenance; then execute the isolated GPU proof-of-concept only after presenting exact download sizes and receiving approval.
