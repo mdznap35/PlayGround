@@ -117,3 +117,13 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Next engineering priorities: finish story-planner/editor round-trip and visible scene continuity; build Media Bin with source/license provenance; then execute the isolated GPU proof-of-concept only after presenting exact download sizes and receiving approval.
 
 - The expanded blueprint now also records Pyramid Flow miniFLUX (Apache-2.0 checkpoint; BF16 compatibility caveat), Mochi 1 (Apache-2.0 but high VRAM demand), Stable Video Diffusion (self-hosted path only after hosted API deprecation), FLUX.1-schnell, rembg, Real-ESRGAN, Stable Audio Open Small, and the non-commercial restriction on MusicGen weights. See the blueprint for links and qualification notes.
+
+
+## Cloud-first open-model research — 2026-11-04
+- Added [CLOUD_PRODUCTION_MASTERPLAN_AR.md](./CLOUD_PRODUCTION_MASTERPLAN_AR.md), a dedicated expanded plan for open video/image/audio engines, free cloud GPU sessions, ComfyUI workflows, Cloudflare D1/R2/Workers, mobile-first orchestration, and staged acceptance gates.
+- Fresh official-source checks: Kaggle documents free P100 GPU access and a weekly quota around 30 hours subject to availability; Colab Free offers variable, non-guaranteed compute (sessions may reach 12 hours); Hugging Face ZeroGPU free-account quota is 5 GPU minutes/day. None is a permanent GPU server.
+- CogVideoX-2B remains the first POC candidate, but official memory figures vary by Diffusers version, precision, resolution and optimization. A newer Diffusers table lists 12.5GB FP16 / 7.8GB INT8; low-memory figures are not guarantees on every GPU. P100 architecture compatibility must be preflighted before any weight download.
+- Wan 2.2 TI2V-5B is a higher-quality candidate with an official ~24GB VRAM path; LTX-2.5 officially requires 32GB+ VRAM, 32GB RAM and 100GB storage. LongCat-Video is retained as a high-resource candidate; HunyuanVideo 1.5 is not selected due to the geographic restrictions in its published license.
+- Added ACE-Step 1.5 and Stable Audio 3 Small as music/SFX candidates, plus refreshed Whisper.cpp/Piper notes. All remain research candidates until installed and tested.
+- No new model weights were downloaded; no GPU notebook, ComfyUI provider, Cloudflare Worker, D1 or R2 bucket was deployed. Existing runtime remains Pillow + FFmpeg + FFprobe on GitHub Actions CPU, with Render serving the static UI.
+- Next: update Issue #20 with GPU compatibility caveats; finish the story/editor round-trip and Media Bin; then run a cloud GPU preflight before approving a specific model download.
