@@ -45,6 +45,24 @@
     };
   }
 
+  function toRendererScenes(scenes) {
+    if (!Array.isArray(scenes)) throw new TypeError("قائمة المشاهد غير صالحة.");
+    return scenes.map((raw, index) => {
+      const scene = normalizeScene(raw, index);
+      return {
+        title:scene.title,
+        narration:scene.narration,
+        visual:scene.visual,
+        narrative_role:scene.narrative_role,
+        purpose:scene.purpose,
+        continuity_note:scene.continuity_note,
+        image_file:scene.image_file || null,
+        camera_move:scene.camera_move,
+        seconds:scene.seconds
+      };
+    });
+  }
+
   function buildTimeline(scenes, audio, options) {
     const settings = options || {};
     const sources = audio || {};
@@ -392,7 +410,7 @@
 
   return {
     SCHEMA, VERSION, MAX_SCENES, MAX_SECONDS,
-    buildTimeline, createProject, normalizeProject, validateProject, toEditorState,
+    buildTimeline, toRendererScenes, createProject, normalizeProject, validateProject, toEditorState,
     snapTime, moveClip, trimClip, splitClip, removeClip, rendererCompatibility
   };
 });
