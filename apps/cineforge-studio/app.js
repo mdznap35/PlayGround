@@ -18,6 +18,8 @@
   let importedStoryPlan = null;
   let projectDocument = null;
   let saveChain = Promise.resolve();
+  const NARRATIVE_ROLE_LABELS = {hook:"الخطاف",context:"السياق",setup:"التمهيد",development:"التطوير",turning_point:"التحول",resolution:"الحل",closing:"الخاتمة",story_beat:"مرحلة سردية"};
+  const NARRATIVE_ROLE_OPTIONS = [["hook","الخطاف"],["context","السياق"],["setup","التمهيد"],["development","التطوير"],["turning_point","التحول"],["resolution","الحل"],["closing","الخاتمة"],["story_beat","مرحلة سردية"]];
   const palette = {
     cinematic: ["#092039", "#17465a", "#b8f3d3"],
     documentary: ["#172438", "#38516a", "#d9c49b"],
@@ -313,6 +315,50 @@
 
     const content = document.createElement("div");
     content.className = "scene-content";
+    const storyMeta = document.createElement("div");
+    storyMeta.className = "scene-story-meta";
+    const roleLabel = document.createElement("label");
+    roleLabel.className = "scene-role-field";
+    const roleCaption = document.createElement("span");
+    roleCaption.textContent = "الدور السردي";
+    const roleSelect = document.createElement("select");
+    roleSelect.setAttribute("aria-label", "الدور السردي للمشهد " + (index + 1));
+    NARRATIVE_ROLE_OPTIONS.forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      roleSelect.append(option);
+    });
+    roleSelect.value = NARRATIVE_ROLE_LABELS[scene.narrative_role] ? scene.narrative_role : "story_beat";
+    roleSelect.addEventListener("change", () => { scene.narrative_role = roleSelect.value; scheduleSave(); });
+    roleLabel.append(roleCaption, roleSelect);
+    const purposeLabel = document.createElement("label");
+    purposeLabel.className = "scene-context-field";
+    const purposeCaption = document.createElement("span");
+    purposeCaption.textContent = "هدف المشهد";
+    const purpose = document.createElement("textarea");
+    purpose.className = "scene-purpose";
+    purpose.maxLength = 300;
+    purpose.rows = 2;
+    purpose.value = scene.purpose || "";
+    purpose.placeholder = "ما الذي يجب أن يفهمه المشاهد أو يتغير هنا؟";
+    purpose.setAttribute("aria-label", "هدف المشهد " + (index + 1));
+    purpose.addEventListener("input", () => { scene.purpose = purpose.value; scheduleSave(); });
+    purposeLabel.append(purposeCaption, purpose);
+    const continuityLabel = document.createElement("label");
+    continuityLabel.className = "scene-context-field scene-continuity-field";
+    const continuityCaption = document.createElement("span");
+    continuityCaption.textContent = "ملاحظة الاستمرارية";
+    const continuity = document.createElement("textarea");
+    continuity.className = "scene-continuity";
+    continuity.maxLength = 500;
+    continuity.rows = 2;
+    continuity.value = scene.continuity_note || "";
+    continuity.placeholder = "الشخصية، المكان، الملابس، الإكسسوار أو الحالة التي يجب الحفاظ عليها...";
+    continuity.setAttribute("aria-label", "ملاحظة الاستمرارية للمشهد " + (index + 1));
+    continuity.addEventListener("input", () => { scene.continuity_note = continuity.value; scheduleSave(); });
+    continuityLabel.append(continuityCaption, continuity);
+    storyMeta.append(roleLabel, purposeLabel, continuityLabel);
     const title = document.createElement("input");
     title.className = "scene-title";
     title.value = scene.title;
@@ -376,7 +422,7 @@
     camera.value = scene.camera_move;
     camera.addEventListener("change", () => { scene.camera_move = camera.value; scheduleSave(); });
     meta.append(label, camera);
-    content.append(title, narration, fitBadge, visual, assetWrap, meta);
+    content.append(title, storyMeta, narration, fitBadge, visual, assetWrap, meta);
 
     const tools = document.createElement("div");
     tools.className = "scene-tools";
@@ -569,7 +615,7 @@
   }
 
   function addScene() {
-    scenes.push({id: Date.now(), title:"مشهد جديد", narration:"اكتب الرسالة التي تريد إيصالها في هذا المشهد.", visual:"حدد العنصر الرئيسي والحركة والإضاءة والإحساس البصري.", image_file:"", camera_move:"push_in", seconds:10});
+    scenes.push({id: Date.now(), title:"مشهد جديد", narration:"اكتب الرسالة التي تريد إيصالها في هذا المشهد.", visual:"حدد العنصر الرئيسي والحركة والإضاءة والإحساس البصري.", narrative_role:"story_beat", purpose:"", continuity_note:"", image_file:"", camera_move:"push_in", seconds:10});
     selectedScene = scenes.length - 1;
     playheadTime = timelineMath.sceneStart(scenes,selectedScene);
     renderAll();
@@ -632,6 +678,9 @@
       title: String(scene.title || "مشهد " + (index+1)).slice(0,100),
       narration: String(scene.narration || "").slice(0,700),
       visual: String(scene.visual || "").slice(0,500),
+      narrative_role: String(scene.narrative_role || "story_beat").slice(0,40),
+      purpose: String(scene.purpose || "").slice(0,300),
+      continuity_note: String(scene.continuity_note || "").slice(0,500),
       image_file: String(scene.image_file || "").trim() || null,
       camera_move: scene.camera_move || "push_in",
       seconds: Math.max(3, Math.min(90, Number(scene.seconds) || 3))
