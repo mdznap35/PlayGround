@@ -19,6 +19,7 @@ test("creates a versioned project with deterministic multi-track timing", () => 
   assert.equal(project.schema_version,2);
   assert.equal(project.timeline.duration,18);
   assert.deepEqual(project.timeline.tracks.map(track=>track.type),["video","voiceover","music"]);
+  assert.deepEqual(project.captions,[]);
   assert.equal(project.timeline.tracks[0].clips[1].start,10);
   assert.equal(project.timeline.tracks[1].clips[0].source,"audio/voice.wav");
   assert.equal(engine.validateProject(project).valid,true);
@@ -136,15 +137,52 @@ test("rejects an incorrect stored timeline duration", () => {
   assert.throws(()=>engine.validateProject(project),/مدة الخط الزمني/);
 });
 
-test("renderer compatibility rejects nonempty subtitle or overlay tracks", () => {
+test("renderer compatibility rejects orphan subtitle clips and overlay tracks", () => {
   const project=engine.createProject(editorState());
   project.timeline.tracks.push({
-    id:"track-subtitles",type:"subtitle",name:"Subtitles",enabled:true,allow_overlap:true,
-    clips:[{id:"subtitle-1",name:"Caption",source:"captions.srt",start:0,source_in:0,duration:18}]
+    id:"track-subtitles",type:"subtitle",name:"Subtitles",enabled:true,allow_overlap:false,
+    clips:[{id:"subtitle-1",name:"Caption",source:"",text:"Caption",scene_id:"s1",start:0,source_in:0,duration:2}]
   });
   const result=engine.rendererCompatibility(project);
   assert.equal(result.ok,false);
-  assert.match(result.errors.join(" "),/لا يدعم مقاطع/);
+  assert.match(result.errors.join(" "),/غير محفوظة/);
+  const overlay=engine.createProject(editorState());
+  overlay.timeline.tracks.push({id:"overlay",type:"overlay",name:"Overlay",enabled:true,allow_overlap:true,clips:[{id:"o1",name:"Title",start:0,source_in:0,duration:1}]});
+  assert.equal(engine.rendererCompatibility(overlay).ok,false);
+});
+
+test("stores validated caption cues and synchronized subtitle timeline clips", () => {
+  const state=editorState();
+  state.captions=[
+    {id:"cap-1",scene_id:"s1",start:1,end:3,text:"مرحباً بالعالم"},
+    {id:"cap-2",scene_id:"s2",start:11,end:14,text:"المشهد الثاني"}
+  ];
+  const project=engine.createProject(state);
+  const track=project.timeline.tracks.find(item=>item.type==="subtitle");
+  assert.equal(track.clips.length,2);
+  assert.equal(track.clips[0].text,"مرحباً بالعالم");
+  assert.equal(engine.rendererCompatibility(project).ok,true);
+  const restored=engine.toEditorState(engine.normalizeProject(JSON.parse(JSON.stringify(project))));
+  assert.deepEqual(restored.captions,state.captions);
+});
+
+test("preserves older project-v2 files without captions", () => {
+  const project=engine.createProject(editorState());
+  delete project.captions;
+  const restored=engine.normalizeProject(project);
+  assert.deepEqual(restored.captions,[]);
+  assert.equal(engine.rendererCompatibility(restored).ok,true);
+});
+
+test("rejects captions that overlap or point outside their scene", () => {
+  const state=editorState();
+  state.captions=[
+    {id:"cap-1",scene_id:"s1",start:1,end:4,text:"الأول"},
+    {id:"cap-2",scene_id:"s1",start:3,end:5,text:"الثاني"}
+  ];
+  assert.throws(()=>engine.createProject(state),/متداخلة/);
+  state.captions=[{id:"cap-3",scene_id:"s1",start:9,end:11,text:"خارج المشهد"}];
+  assert.throws(()=>engine.createProject(state),/مدة المشهد|خارج مدة/);
 });
 
 test("renderer compatibility rejects audio source and duration drift", () => {
@@ -190,7 +228,7 @@ test("projects narrative metadata into the renderer job without changing scene t
   state.scenes[0].continuity_note="المعطف الأزرق لا يتغير.";
   const projected=engine.toRendererScenes(state.scenes);
   assert.deepEqual(projected[0],{
-    title:"الأول",narration:"نص",visual:"وصف",narrative_role:"hook",
+    id:"s1",title:"الأول",narration:"نص",visual:"وصف",narrative_role:"hook",
     purpose:"فتح سؤال مركزي",continuity_note:"المعطف الأزرق لا يتغير.",
     image_file:"assets/a.webp",camera_move:"push_in",seconds:10
   });
