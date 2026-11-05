@@ -90,6 +90,9 @@
         title: text(beat.title, 100, "مرحلة " + (index + 1)),
         prompt: text(beat.prompt, 500),
         content: text(beat.content, 700),
+        narrative_role: ["hook","context","setup","development","turning_point","resolution","closing","story_beat"].includes(beat.narrative_role) ? beat.narrative_role : ["hook","context","setup","development","turning_point","resolution","closing"][index] || "story_beat",
+        purpose: text(beat.purpose, 300, text(beat.prompt, 500)),
+        continuity_note: text(beat.continuity_note, 500),
         share: Number.isFinite(Number(beat.share)) ? Math.max(0, Math.min(100, Number(beat.share))) : 0
       };
     });
@@ -103,8 +106,9 @@
       image_file: "",
       camera_move: moves[index % moves.length],
       seconds: durations[index],
-      narrative_role: "story_beat",
-      continuity_note: ""
+      narrative_role: beat.narrative_role,
+      purpose: beat.purpose,
+      continuity_note: beat.continuity_note
     }));
     const snapshot = {
       schema: SCHEMA,
