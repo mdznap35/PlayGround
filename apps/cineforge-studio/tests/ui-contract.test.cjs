@@ -15,16 +15,12 @@ test("the caption engine is loaded before the editor application", () => {
   assert.ok(engine < application, "caption engine must load before app.js");
 });
 
-test("all caption editor controls required by app.js exist in the page", () => {
-  const ids = [
-    "captionScene", "captionStart", "captionEnd", "captionText",
-    "captionSaveButton", "captionCancelButton", "captionList", "captionStatus",
-    "captionFile", "captionImportButton", "captionExportSrtButton", "captionExportVttButton"
-  ];
-  for (const id of ids) {
-    assert.ok(html.includes('id="' + id + '"'), "missing #" + id);
-    assert.ok(app.includes('$("' + id + '")'), "app.js does not reference #" + id);
-  }
+test("every literal DOM id used by app.js exists in the page", () => {
+  const present = new Set([...html.matchAll(/\\bid="([^"]+)"/g)].map(match => match[1]));
+  const referenced = new Set([...app.matchAll(/\\$\\("([^"]+)"\\)/g)].map(match => match[1]));
+  const missing = [...referenced].filter(id => !present.has(id)).sort();
+  assert.deepEqual(missing, [], "app.js references missing page elements");
+  assert.ok(referenced.size >= 60, "the contract scan unexpectedly found too few app selectors");
 });
 
 test("the portable renderer job includes validated subtitles", () => {
