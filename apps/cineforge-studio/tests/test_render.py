@@ -258,6 +258,11 @@ class JobValidationTests(unittest.TestCase):
                 changed_bounds,
                 "burned subtitle cue produced no visible pixel changes anywhere in the MP4 frame"
             )
+            left, top, right, bottom = changed_bounds
+            self.assertGreaterEqual(left, 480, "subtitle pixel changes must not drift into the left safe margin")
+            self.assertLessEqual(right, 1440, "subtitle pixel changes must not drift into the right safe margin")
+            self.assertGreaterEqual(top, 540, "subtitle pixel changes must remain in the lower half")
+            self.assertLessEqual(bottom, 885, "subtitle pixel changes must remain above the bottom unsafe edge")
             self.assertGreater(
                 strong_changed_pixels, 100,
                 "burned subtitle cue produced too few visible pixel changes"
