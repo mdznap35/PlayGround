@@ -2,9 +2,9 @@
 
 **Updated:** 2026-11-05  
 **Active implementation branch:** `feat/cineforge-cinematic-media-v2`  
-**Latest verified implementation/test head:** `4346bd1bed463e0a7a88fd4ee6d407e13d0d35b4` — exact-head CI passed (67 Node tests, 28 Python tests).  
+**Latest verified implementation/test head:** `399e22dfbfc99d74bd9745002b28e089d8418fef` — exact-head CI passed (67 Node tests, 28 Python tests, including burned-subtitle pixel-diff verification).  
 **Render service:** `srv-dbl0am942hec73dgt93g` — [live site](https://cineforge-studio-b92r.onrender.com/)  
-**Verified Render deploy at this implementation head:** `dep-dbm882rbc2fs73atcf00` — Live on `4346bd1`.  
+**Verified Render deploy at this implementation head:** `dep-dbm8cs2vcj2c7388f56g` — Live on `399e22d`.  
 **Phase PR:** [#12](https://github.com/mdznap35/PlayGround/pull/12), open Draft, base `feat/cineforge-studio-core`; not merged.
 
 ## Product goal
@@ -71,7 +71,7 @@ Files changed on the active branch:
 ## Deployment facts
 - Render hosts the static UI only; actual video rendering and FFprobe QA run in GitHub Actions.
 - Auto-deploy branch: `feat/cineforge-cinematic-media-v2`.
-- Verified Render deploy at implementation head `4346bd1`: `dep-dbm882rbc2fs73atcf00`, status `live`.
+- Verified Render deploy at implementation head `399e22d`: `dep-dbm8cs2vcj2c7388f56g`, status `live`.
 - Main studio: https://cineforge-studio-b92r.onrender.com/
 - Story planner: https://cineforge-studio-b92r.onrender.com/story-planner.html
 - The current page now includes the timed-caption panel and loads `captions.js` before `app.js`. A Node contract test checks all literal `$("…")` IDs used by `app.js` against the HTML.
@@ -215,6 +215,8 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Added `tests/ui-contract.test.cjs`; it checks that `captions.js` loads before `app.js`, every literal DOM ID referenced by the editor exists in HTML, and renderer-job export includes validated subtitles.
 - The renderer validates scene identity, cue timing, scene bounds, text length and overlaps; it writes an SRT sidecar in the job's temporary workspace and burns it into the video through FFmpeg's subtitle filter before audio muxing. Renderer job schema remains version 1.
 - Added a real SRT line-structure test and extended the image + voice + music integration render fixture with an Arabic subtitle cue in commit `4346bd1bed463e0a7a88fd4ee6d407e13d0d35b4`. This exercises the subtitle FFmpeg path in the end-to-end Python render test.
-- Exact-head workflow [#42035800872](https://github.com/mdznap35/PlayGround/actions/runs/42035800872) passed: Node **67/67**, Python **28/28**, sample render 40 seconds, H.264, 1920×1080, 24 fps, FFprobe checks and artifact upload. Artifact `cineforge-mp4-92`, ID `13418467348`, 5,135,987 bytes.
+- Exact-head workflow [#42037321618](https://github.com/mdznap35/PlayGround/actions/runs/42037321618) passed on `399e22dfbfc99d74bd9745002b28e089d8418fef`: Node **67/67**, Python **28/28**, sample render 40 seconds, H.264, 1920×1080, 24 fps, FFprobe checks and artifact upload.
+- The subtitle integration now renders the same synthetic project once with an Arabic cue and once without it, extracts the same 1.5-second frame, and compares the pixels. CI logged **18,946** pixels with luminance difference above 60 and difference bounds `(612, 643, 1316, 796)`; this confirms visible frame changes from the subtitle-enabled render. It is a pixel-presence regression test, not a human legibility/RTL review.
+- Artifact `cineforge-mp4-98`, ID `13418144697`, 5,135,987 bytes.
 - The integration fixture also renders an Arabic subtitle cue with voice and music and checks the resulting H.264/AAC file and duration. No real Android browser screenshot or human visual typography review has been completed; the sample 40-second demo artifact itself is not a subtitle visual proof.
 - PR #12 remains open/Draft and unmerged. No changes were made to `main`; no model weights or paid resources were used.
