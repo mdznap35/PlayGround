@@ -185,6 +185,18 @@
     if ($("timelineCurrentTime")) $("timelineCurrentTime").textContent = frameTimecode(playheadTime);
     if ($("timelineTotalTime")) $("timelineTotalTime").textContent = frameTimecode(total);
     if ($("timelineZoomValue")) $("timelineZoomValue").textContent = timelineZoom + "%";
+    const viewport = $("timelineScroll");
+    if (stage && viewport) {
+      const stageRect = stage.getBoundingClientRect();
+      const viewportRect = viewport.getBoundingClientRect();
+      const markerX = stageRect.left + stageRect.width * progress;
+      const margin = Math.min(44, viewport.clientWidth * 0.12);
+      if (markerX > viewportRect.right - margin) {
+        viewport.scrollLeft += markerX - (viewportRect.right - margin);
+      } else if (markerX < viewportRect.left + margin) {
+        viewport.scrollLeft -= (viewportRect.left + margin) - markerX;
+      }
+    }
     if ($("previewTime")) $("previewTime").textContent = timecode(playheadTime);
     document.querySelectorAll(".timeline-clip[data-scene-index]").forEach(button => {
       button.classList.toggle("is-active", Number(button.dataset.sceneIndex) === selectedScene);
@@ -1094,6 +1106,9 @@
     if (bounds.width > 0) seekTimeline(((event.clientX - bounds.left) / bounds.width) * totalSeconds());
   });
   document.addEventListener("keydown", handleTimelineKeyboard);
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) stopTimelinePlayback();
+  });
   $("downloadButton").addEventListener("click", downloadJob);
   $("downloadProjectFileButton").addEventListener("click", downloadFullProject);
   $("restorePreviousVersionButton").addEventListener("click", restorePreviousVersion);
