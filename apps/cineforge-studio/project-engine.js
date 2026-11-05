@@ -63,9 +63,42 @@
     });
   }
 
+  function normalizeCaptions(captions, scenes) {
+    const input = captions == null ? [] : captions;
+    if (!Array.isArray(input) || input.length > 500) throw new RangeError("قائمة الترجمة يجب أن تحتوي على 0 إلى 500 مقطع.");
+    const ranges = new Map();
+    let cursor = 0;
+    (Array.isArray(scenes) ? scenes : []).forEach(scene => {
+      const duration = Number(scene.seconds);
+      ranges.set(String(scene.id), {start:cursor,end:cursor+duration});
+      cursor += duration;
+    });
+    const result = input.map((raw,index) => {
+      const cue = raw && typeof raw === "object" ? raw : {};
+      const id = clean(cue.id,120,"caption-" + (index + 1));
+      const start = finite(cue.start,NaN), end = finite(cue.end,NaN);
+      const text = clean(cue.text,180,"");
+      const sceneId = clean(cue.scene_id,120,"");
+      if (!id || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) throw new TypeError("توقيت مقطع الترجمة غير صالح.");
+      if (!text || text.split("\\n").length > 2) throw new TypeError("نص الترجمة يجب أن يكون سطراً أو سطرين.");
+      const range = ranges.get(sceneId);
+      if (!range) throw new TypeError("المشهد المرتبط بمقطع الترجمة غير موجود.");
+      if (start < range.start - 0.001 || end > range.end + 0.001) throw new RangeError("يجب أن يقع مقطع الترجمة كاملاً داخل مدة المشهد المرتبط به.");
+      return {id,scene_id:sceneId,start,end,text};
+    }).sort((a,b)=>a.start-b.start || a.end-b.end);
+    const ids = new Set();
+    result.forEach((cue,index) => {
+      if (ids.has(cue.id)) throw new TypeError("معرّفات مقاطع الترجمة يجب أن تكون فريدة.");
+      ids.add(cue.id);
+      if (index && cue.start < result[index-1].end - 0.001) throw new RangeError("توجد مقاطع ترجمة متداخلة.");
+    });
+    return result;
+  }
+
   function buildTimeline(scenes, audio, options) {
     const settings = options || {};
     const sources = audio || {};
+    const captions = normalizeCaptions(settings.captions || [], scenes);
     const fps = Math.max(1, Math.min(60, Math.round(finite(settings.fps, 24))));
     let cursor = 0;
     const videoClips = (Array.isArray(scenes) ? scenes : []).map((scene, index) => {
@@ -100,6 +133,13 @@
         start:0, source_in:0, duration:total, volume:Math.max(0,Math.min(1,finite(sources.music_volume,0.18)))
       });
     }
+    if (captions.length) tracks.push({
+      id:"track-subtitles", type:"subtitle", name:"الترجمة", enabled:true, allow_overlap:false,
+      clips:captions.map(cue=>({
+        id:cue.id, name:cue.text, text:cue.text, scene_id:cue.scene_id, source:"",
+        start:cue.start, source_in:0, duration:cue.end-cue.start
+      }))
+    });
     return {version:1, fps:fps, duration:total, tracks:tracks};
   }
 
@@ -108,7 +148,7 @@
       schema:project.schema, schema_version:project.schema_version, id:project.id,
       title:project.title, form:project.form, scenes:project.scenes,
       selected_scene_id:project.selected_scene_id, story_context:project.story_context,
-      timeline:project.timeline
+      captions:project.captions || [], timeline:project.timeline
     };
   }
 
@@ -139,7 +179,8 @@
       music_file:clean(form.music_file,180,""),
       music_volume:Math.max(0,Math.min(1,finite(form.music_volume,0.18)))
     };
-    const timeline = buildTimeline(scenes, normalizedForm);
+    const captions = normalizeCaptions(input.captions || input.caption_segments || [], scenes);
+    const timeline = buildTimeline(scenes, normalizedForm, {captions});
     const selected = input.selectedScene != null ? Number(input.selectedScene) : -1;
     const selectedId = input.selected_scene_id || (selected >= 0 && scenes[selected] ? scenes[selected].id : scenes[0].id);
     const project = {
@@ -150,6 +191,7 @@
       story_context:input.storyPlan && typeof input.storyPlan === "object"
         ? clone(input.storyPlan)
         : (input.story_context && typeof input.story_context === "object" ? clone(input.story_context) : null),
+      captions:captions,
       timeline:timeline,
       created_at:(prior && prior.created_at) || input.created_at || new Date(now || Date.now()).toISOString(),
       updated_at:new Date(now || Date.now()).toISOString(),
@@ -170,8 +212,10 @@
   function normalizeProject(value) {
     const input = value && typeof value === "object" ? value : {};
     if (input.schema === SCHEMA && input.schema_version === VERSION) {
-      validateProject(input);
-      return clone(input);
+      const compatible = clone(input);
+      if (!Array.isArray(compatible.captions)) compatible.captions = [];
+      validateProject(compatible);
+      return compatible;
     }
     if (input.form && Array.isArray(input.scenes)) return createProject({
       id:input.id, form:input.form, scenes:input.scenes,
@@ -179,6 +223,7 @@
       selected_scene_id:input.selected_scene_id,
       storyPlan:input.storyPlan,
       story_context:input.story_context,
+      captions:Array.isArray(input.captions) ? input.captions : [],
       created_at:input.created_at
     }, null);
     if (Array.isArray(input.scenes)) return createProject({
@@ -213,6 +258,24 @@
       return sum+duration;
     },0);
     if (sceneDuration>MAX_SECONDS) throw new RangeError("مجموع مدة المشاهد يتجاوز 900 ثانية.");
+    const captions = Array.isArray(project.captions) ? project.captions : [];
+    if (captions.length > 500) throw new RangeError("الحد الأقصى 500 مقطع ترجمة.");
+    const ranges = new Map(); let cursor = 0;
+    project.scenes.forEach(scene => { ranges.set(String(scene.id),{start:cursor,end:cursor+Number(scene.seconds)}); cursor+=Number(scene.seconds); });
+    const captionIds = new Set();
+    const ordered = captions.map((cue,index) => {
+      if (!cue || typeof cue !== "object") throw new TypeError("مقطع الترجمة غير صالح.");
+      const id=String(cue.id||""), sceneId=String(cue.scene_id||"");
+      const start=finite(cue.start,NaN), end=finite(cue.end,NaN), text=String(cue.text||"").trim();
+      if (!id || captionIds.has(id)) throw new TypeError("معرّفات مقاطع الترجمة يجب أن تكون فريدة.");
+      captionIds.add(id);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start<0 || end<=start || end>sceneDuration+0.001) throw new RangeError("توقيت مقطع الترجمة غير صالح.");
+      if (!text || text.length>180 || text.split("\\n").length>2) throw new RangeError("نص مقطع الترجمة يجب ألا يتجاوز 180 حرفاً أو سطرين.");
+      const range=ranges.get(sceneId);
+      if (!range || start<range.start-0.001 || end>range.end+0.001) throw new RangeError("مقطع الترجمة خارج مدة المشهد المرتبط به.");
+      return {id,scene_id:sceneId,start,end,text};
+    }).sort((a,b)=>a.start-b.start || a.end-b.end);
+    for(let index=1;index<ordered.length;index++) if(ordered[index].start<ordered[index-1].end-0.001) throw new RangeError("توجد مقاطع ترجمة متداخلة.");
     const trackIds = new Set();
     let maxEnd = 0;
     for (const track of project.timeline.tracks) {
@@ -241,6 +304,18 @@
         maxEnd = Math.max(maxEnd,start + duration);
         if (clip.scene_id && !sceneIds.has(String(clip.scene_id))) {
           throw new TypeError("المقطع يشير إلى مشهد غير موجود.");
+        }
+      }
+    }
+    const subtitleTracks=project.timeline.tracks.filter(track=>track.type==="subtitle");
+    if(captions.length){
+      if(subtitleTracks.length!==1 || subtitleTracks[0].clips.length!==captions.length) throw new TypeError("مسار الترجمة لا يطابق المقاطع المحفوظة.");
+      const mapped=new Map(subtitleTracks[0].clips.map(clip=>[String(clip.id),clip]));
+      for(const cue of captions){
+        const clip=mapped.get(cue.id);
+        if(!clip || String(clip.scene_id)!==cue.scene_id || Math.abs(Number(clip.start)-cue.start)>0.001 ||
+          Math.abs(Number(clip.duration)-(cue.end-cue.start))>0.001 || String(clip.text||clip.name||"")!==cue.text) {
+          throw new TypeError("بيانات مسار الترجمة لا تطابق المقاطع المحفوظة.");
         }
       }
     }
@@ -364,8 +439,21 @@
       }
       const errors = [];
       for (const track of project.timeline.tracks) {
-        if (!["video","voiceover","music"].includes(track.type) && track.clips.length) {
-          errors.push("المصيّر v1 لا يدعم مقاطع في مسار " + track.type + ".");
+        if (!["video","voiceover","music","subtitle"].includes(track.type) && track.clips.length) errors.push("المصيّر v1 لا يدعم مقاطع في مسار " + track.type + ".");
+      }
+      const subtitleTracks=project.timeline.tracks.filter(track=>track.type==="subtitle");
+      const cues=Array.isArray(project.captions)?project.captions:[];
+      if(cues.length && subtitleTracks.length!==1) errors.push("المصيّر يحتاج مسار ترجمة واحداً مطابقاً للمقاطع المحفوظة.");
+      if(!cues.length && subtitleTracks.some(track=>track.clips.length)) errors.push("مسار الترجمة يحتوي مقاطع غير محفوظة في قائمة الترجمة.");
+      if(subtitleTracks.length===1 && cues.length){
+        const clips=new Map(subtitleTracks[0].clips.map(clip=>[String(clip.id),clip]));
+        for(const cue of cues){
+          const clip=clips.get(String(cue.id));
+          if(!clip || Math.abs(Number(clip.start)-Number(cue.start))>0.001 ||
+            Math.abs(Number(clip.duration)-(Number(cue.end)-Number(cue.start)))>0.001 ||
+            String(clip.scene_id)!==String(cue.scene_id) || String(clip.text||clip.name||"")!==String(cue.text)){
+            errors.push("بيانات الترجمة في الخط الزمني غير متزامنة مع قائمة المقاطع."); break;
+          }
         }
       }
       for (const type of ["voiceover","music"]) {
@@ -403,6 +491,7 @@
     return {
       form:clone(project.form),
       scenes:clone(project.scenes),
+      captions:clone(Array.isArray(project.captions)?project.captions:[]),
       selectedScene:Math.max(0,selectedIndex),
       storyPlan:project.story_context ? clone(project.story_context) : null
     };
