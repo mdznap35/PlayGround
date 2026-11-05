@@ -151,6 +151,25 @@
     return normalized;
   }
 
+  function rebase(cues, oldScenes, newScenes) {
+    const oldRanges = new Map(sceneRanges(oldScenes).map(range => [range.id, range]));
+    const newRanges = new Map(sceneRanges(newScenes).map(range => [range.id, range]));
+    return (Array.isArray(cues) ? cues : []).flatMap(cue => {
+      if (!cue || typeof cue !== "object") return [];
+      const before = oldRanges.get(String(cue.scene_id));
+      const after = newRanges.get(String(cue.scene_id));
+      if (!before || !after) return [];
+      const relativeStart = Number(cue.start) - before.start;
+      const relativeEnd = Number(cue.end) - before.start;
+      const nextDuration = after.end - after.start;
+      if (!Number.isFinite(relativeStart) || !Number.isFinite(relativeEnd) ||
+          relativeStart < 0 || relativeStart >= nextDuration || relativeEnd <= 0) return [];
+      const start = after.start + Math.max(0, relativeStart);
+      const end = after.start + Math.min(nextDuration, relativeEnd);
+      return end > start ? [{...cue, start, end}] : [];
+    }).sort((a, b) => a.start - b.start || a.end - b.end);
+  }
+
   function toMilliseconds(seconds) {
     return Math.max(0, Math.round(Number(seconds) * 1000));
   }
@@ -178,5 +197,5 @@
     ).join("\n\n") + "\n";
   }
 
-  return {MAX_CUES, MAX_TEXT, parseTimestamp, parseSrt, parseVtt, validate, sceneRanges, sceneAt, timestamp, exportSrt, exportVtt};
+  return {MAX_CUES, MAX_TEXT, parseTimestamp, parseSrt, parseVtt, validate, sceneRanges, sceneAt, rebase, timestamp, exportSrt, exportVtt};
 });

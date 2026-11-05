@@ -13,6 +13,7 @@ on:
       - "apps/cineforge-studio/gpu_preflight.py"
       - "apps/cineforge-studio/app.js"
       - "apps/cineforge-studio/index.html"
+      - "apps/cineforge-studio/captions.js"
       - "apps/cineforge-studio/styles.css"
       - "apps/cineforge-studio/story-plan-import.js"
       - "apps/cineforge-studio/story-planner.html"
@@ -30,6 +31,7 @@ on:
       - "apps/cineforge-studio/gpu_preflight.py"
       - "apps/cineforge-studio/app.js"
       - "apps/cineforge-studio/index.html"
+      - "apps/cineforge-studio/captions.js"
       - "apps/cineforge-studio/styles.css"
       - "apps/cineforge-studio/story-plan-import.js"
       - "apps/cineforge-studio/story-planner.html"
@@ -87,6 +89,7 @@ jobs:
           node --check apps/cineforge-studio/story-planner.js
           node --check apps/cineforge-studio/story-plan-import.js
           node --check apps/cineforge-studio/media-bin.js
+          node --check apps/cineforge-studio/captions.js
 
       - name: Test story-plan importer
         run: node --test apps/cineforge-studio/tests/*.test.cjs

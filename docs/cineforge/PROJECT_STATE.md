@@ -198,3 +198,11 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Project engine v2 now normalizes and preserves per-scene narrative metadata. The scene editor exposes role selection, purpose and continuity note fields; renderer job JSON includes the metadata without changing `schema_version: 1`.
 - Added importer bounds/default tests, project save/reload metadata tests, and an end-to-end fixture covering planner export → importer → project v2 save/reload → scene metadata projection, while verifying continuity-bible and source records remain intact.
 - This metadata does not itself guarantee visual continuity or alter rendered pixels; it is structured production guidance. Browser/Android smoke testing remains a separate acceptance gate.
+
+
+## Subtitle continuity and recovery hardening — 2026-11-05
+- Centralized scene-relative caption rebasing in the captions engine so the behavior can be tested independently of the page.
+- Scene reordering, deletion and duration changes now preserve remaining cue positions relative to their scenes; cues belonging to removed scenes or outside a shortened scene are removed.
+- Snapshot restoration now carries the saved caption list into the restored project, and loading/replacing a project refreshes the subtitle editor form and selected scene.
+- Added regression tests for reorder/delete/duration rebasing and a full static DOM-ID contract test for the editor page.
+- Exact-head GitHub Actions and a real Android browser acceptance pass remain required before closing this work item.

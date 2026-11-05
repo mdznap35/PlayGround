@@ -65,3 +65,35 @@ test("maps a timestamp to the scene interval", () => {
   assert.equal(captions.sceneAt(scenes,5),"s2");
   assert.equal(captions.sceneAt(scenes,8.99),"s2");
 });
+
+
+test("rebases scene-linked cues when the storyboard order changes", () => {
+  const original = [{id:"s1",seconds:5},{id:"s2",seconds:4},{id:"s3",seconds:3}];
+  const reordered = [{id:"s2",seconds:4},{id:"s1",seconds:5},{id:"s3",seconds:3}];
+  const cues = [
+    {id:"one",scene_id:"s1",start:2,end:4,text:"الأول"},
+    {id:"two",scene_id:"s2",start:6,end:7,text:"الثاني"},
+    {id:"three",scene_id:"s3",start:9.5,end:11,text:"الثالث"}
+  ];
+  const result = captions.rebase(cues, original, reordered);
+  assert.deepEqual(result.map(cue => [cue.id,cue.start,cue.end]), [
+    ["two",1,2],["one",6,8],["three",9.5,11]
+  ]);
+  assert.equal(captions.validate(result,{duration:12,scenes:reordered}).length,3);
+});
+
+test("drops deleted-scene cues and cues outside a shortened scene while shifting later scenes", () => {
+  const original = [{id:"s1",seconds:5},{id:"s2",seconds:4},{id:"s3",seconds:3}];
+  const changed = [{id:"s2",seconds:2},{id:"s3",seconds:3}];
+  const cues = [
+    {id:"deleted",scene_id:"s1",start:1,end:2,text:"يُحذف مع المشهد"},
+    {id:"kept",scene_id:"s2",start:6,end:7,text:"يبقى"},
+    {id:"out-of-range",scene_id:"s2",start:8.5,end:8.9,text:"خارج المدة الجديدة"},
+    {id:"shifted",scene_id:"s3",start:9.5,end:11,text:"يتحرك مع المشهد"}
+  ];
+  const result = captions.rebase(cues, original, changed);
+  assert.deepEqual(result.map(cue => [cue.id,cue.start,cue.end]), [
+    ["kept",1,2],["shifted",2.5,4]
+  ]);
+  assert.equal(captions.validate(result,{duration:5,scenes:changed}).length,2);
+});

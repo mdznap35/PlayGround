@@ -27,3 +27,10 @@ test("the portable renderer job includes validated subtitles", () => {
   assert.match(app, /subtitles:\s*captionsEngine\.validate\(captions/);
   assert.ok(html.indexOf('src="./captions.js"') < html.indexOf('src="./app.js"'));
 });
+
+
+test("every literal DOM id requested by app.js exists in the studio page", () => {
+  const referenced = new Set([...app.matchAll(/\$\(\s*["']([^"']+)["']\s*\)/g)].map(match => match[1]));
+  const missing = [...referenced].filter(id => !html.includes('id="' + id + '"'));
+  assert.deepEqual(missing, [], "Missing app DOM ids: " + missing.join(", "));
+});

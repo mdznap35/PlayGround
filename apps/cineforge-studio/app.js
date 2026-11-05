@@ -110,6 +110,7 @@
     editingCaptionId = null;
     importedStoryPlan = imported.storyContext;
     selectedScene = 0;
+    resetCaptionForm();
     updateMusicVolumeLabel();
     renderAll();
     updatePreview();
@@ -148,6 +149,7 @@
     const remainder = target - scenes.reduce((sum, scene) => sum + scene.seconds, 0);
     scenes[scenes.length - 1].seconds += remainder;
     selectedScene = 0;
+    resetCaptionForm();
     renderAll();
     scheduleSave();
   }
@@ -456,9 +458,15 @@
     duration.value = String(scene.seconds);
     duration.setAttribute("aria-label", "مدة المشهد بالثواني");
     duration.addEventListener("change", () => {
+      const oldScenes = scenes.map(item => ({...item}));
       scene.seconds = Math.max(3, Math.min(90, Number(duration.value) || 3));
       duration.value = String(scene.seconds);
-      renderTimeline(); updateNarrationFitBadge(fitBadge, scene); scheduleSave();
+      rebaseCaptions(oldScenes, scenes);
+      if (editingCaptionId && !captions.some(cue => String(cue.id) === String(editingCaptionId))) resetCaptionForm();
+      renderCaptions();
+      renderTimeline();
+      updateNarrationFitBadge(fitBadge, scene);
+      scheduleSave();
     });
     const right = document.createElement("div");
     right.className = "scene-side";
@@ -623,10 +631,11 @@
 
   function deleteScene(index) {
     if (scenes.length <= 1) { alert("يجب أن يحتوي المشروع على مشهد واحد على الأقل."); return; }
-    const removedSceneId=String(scenes[index].id);
+    const oldScenes=scenes.map(scene=>({...scene}));
     scenes.splice(index, 1);
-    captions=captions.filter(cue=>String(cue.scene_id)!==removedSceneId);
+    rebaseCaptions(oldScenes,scenes);
     selectedScene = Math.min(selectedScene, scenes.length - 1);
+    if(editingCaptionId && !captions.some(cue=>String(cue.id)===String(editingCaptionId))) resetCaptionForm();
     playheadTime = timelineMath.sceneStart(scenes,selectedScene);
     renderAll();
     scheduleSave();
@@ -733,19 +742,7 @@
 
 
   function rebaseCaptions(oldScenes,newScenes) {
-    const oldRanges=new Map(),newRanges=new Map();
-    let oldCursor=0,newCursor=0;
-    oldScenes.forEach(scene=>{oldRanges.set(String(scene.id),{start:oldCursor,end:oldCursor+Number(scene.seconds)});oldCursor+=Number(scene.seconds);});
-    newScenes.forEach(scene=>{newRanges.set(String(scene.id),{start:newCursor,end:newCursor+Number(scene.seconds)});newCursor+=Number(scene.seconds);});
-    captions=captions.flatMap(cue=>{
-      const before=oldRanges.get(String(cue.scene_id)),after=newRanges.get(String(cue.scene_id));
-      if(!before||!after) return [];
-      const relativeStart=Number(cue.start)-before.start, relativeEnd=Number(cue.end)-before.start;
-      if(relativeStart>=after.end-after.start) return [];
-      const start=after.start+Math.max(0,relativeStart);
-      const end=after.start+Math.min(after.end-after.start,relativeEnd);
-      return end>start ? [{...cue,start,end}] : [];
-    });
+    captions = captionsEngine.rebase(captions, oldScenes, newScenes);
   }
 
   function captionOptions() {
@@ -1152,7 +1149,8 @@
         form:editor.form,
         scenes:editor.scenes,
         selectedScene:editor.selectedScene,
-        storyPlan:editor.storyPlan
+        storyPlan:editor.storyPlan,
+        captions:editor.captions
       },current,new Date().toISOString());
       applyProjectDocument(restored,editor);
       renderAll();
@@ -1179,6 +1177,7 @@
     editingCaptionId=null;
     importedStoryPlan=state.storyPlan;
     selectedScene=state.selectedScene;
+    resetCaptionForm();
     projectDocument=normalized;
     playheadTime=0;
     stopTimelinePlayback();
