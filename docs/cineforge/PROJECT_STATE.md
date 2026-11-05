@@ -2,9 +2,9 @@
 
 **Updated:** 2026-11-05  
 **Active implementation branch:** `feat/cineforge-cinematic-media-v2`  
-**Latest verified implementation/test head:** `399e22dfbfc99d74bd9745002b28e089d8418fef` — exact-head CI passed (67 Node tests, 28 Python tests, including burned-subtitle pixel-diff verification).  
+**Latest verified implementation/test head:** `a4e41336f00db7ec436c5c59f38875ee17aa5493` — exact-head CI passed (67 Node tests, 33 Python tests, subtitle pixel-diff and hash-backed MP4 QA).  
 **Render service:** `srv-dbl0am942hec73dgt93g` — [live site](https://cineforge-studio-b92r.onrender.com/)  
-**Verified Render deploy at this implementation head:** `dep-dbm8cs2vcj2c7388f56g` — Live on `399e22d`.  
+**Verified Render deploy at this implementation head:** `dep-dbm8hf97lnhs738r3lf0` — Live on `a4e4133`.  
 **Phase PR:** [#12](https://github.com/mdznap35/PlayGround/pull/12), open Draft, base `feat/cineforge-studio-core`; not merged.
 
 ## Product goal
@@ -71,7 +71,7 @@ Files changed on the active branch:
 ## Deployment facts
 - Render hosts the static UI only; actual video rendering and FFprobe QA run in GitHub Actions.
 - Auto-deploy branch: `feat/cineforge-cinematic-media-v2`.
-- Verified Render deploy at implementation head `399e22d`: `dep-dbm8cs2vcj2c7388f56g`, status `live`.
+- Verified Render deploy at implementation head `a4e4133`: `dep-dbm8hf97lnhs738r3lf0`, status `live`.
 - Main studio: https://cineforge-studio-b92r.onrender.com/
 - Story planner: https://cineforge-studio-b92r.onrender.com/story-planner.html
 - The current page now includes the timed-caption panel and loads `captions.js` before `app.js`. A Node contract test checks all literal `$("…")` IDs used by `app.js` against the HTML.
@@ -82,7 +82,7 @@ Files changed on the active branch:
 2. Finish CF-03 acceptance: validate dimensions/duration and rights completeness, support reusable asset links as needed, show missing/unknown-rights preflight warnings, and test file picking/IndexedDB on Android. Media Bin, SHA-256 and ZIP provenance baseline already exist.
 3. Finish CF-04 audio and subtitle quality: subtitle editing/import/export and FFmpeg burn-in are implemented and tested; remaining work includes dedicated 1:1 safe-area tuning, visual checks for Arabic shaping/punctuation/numerals/wrapping, timed voice alignment, ambience/SFX tracks, fades/ducking and peak/clipping QA.
 4. Extend CF-05 from the current project/timeline model to renderable transitions, overlays, video clips and true multi-clip audio mixing. Renderer compatibility must continue rejecting edits it cannot faithfully render.
-5. Expand CF-06 QA with black/frozen-frame and silence checks where measurable, output SHA-256, export profiles, thumbnails and clearer delivery states.
+5. Expand CF-06 QA with black/frozen-frame and silence checks, bitrate thresholds per profile, render IDs/reproducibility manifest, export profiles, thumbnails and clearer delivery states. The post-render SHA-256/size/codec/profile report now exists and is tested.
 6. Run the CF-09 CogVideoX-2B proof only after a real free GPU session is verified and an exact model/dependency download manifest is explicitly approved. No model weights are currently downloaded.
 7. Complete phone backup/restore and release checks, including recovery after browser restart.
 
@@ -220,3 +220,17 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Artifact `cineforge-mp4-98`, ID `13418144697`, 5,135,987 bytes.
 - The integration fixture also renders an Arabic subtitle cue with voice and music and checks the resulting H.264/AAC file and duration. No real Android browser screenshot or human visual typography review has been completed; the sample 40-second demo artifact itself is not a subtitle visual proof.
 - PR #12 remains open/Draft and unmerged. No changes were made to `main`; no model weights or paid resources were used.
+
+
+## Hash-backed delivery QA — 2026-11-05
+
+- Added `apps/cineforge-studio/qa_report.py`, a standalone, dependency-free report builder that consumes the renderer job, FFprobe JSON and final MP4.
+- The report schema `cineforge.render-qa@1` records H.264 codec, expected dimensions, frame and average frame rates, video bitrate, actual/expected duration and delta, audio expectation/presence, each audio stream's codec/sample rate/channel layout/bitrate, container size, MP4 byte size and SHA-256.
+- Required gates fail on missing/empty MP4, invalid aspect, missing H.264 stream, wrong dimensions, unsupported frame rate, timeline duration mismatch, missing requested audio or non-finite timing data.
+- Added five Python tests for exact hash/size reporting, silent jobs, missing requested audio, wrong dimensions/frame rate/duration, missing/empty output and invalid aspect.
+- Replaced the workflow's inline QA block with the standalone module; the artifact continues to include `cineforge.mp4`, `render-report.json` and `ffprobe.json`.
+- Added `qa_report.py` to both push and pull-request path filters, so changes to the QA implementation trigger the workflow.
+- Exact-head workflow [#42038440550](https://github.com/mdznap35/PlayGround/actions/runs/42038440550) passed at `677f82a6f644ba345ca92cddcf8bae9c7f53515a`: Node **67/67**, Python **33/33**, demo MP4 40 seconds, H.264 1920×1080 at 24 fps, FFprobe and artifact upload.
+- Independently downloaded artifact `cineforge-mp4-103` (ID `13418744193`) and verified its report values against the actual MP4 bytes: size **5,195,656** bytes and SHA-256 `781be50024ed984628f5400233ae0fb766603416759eacbb56c4f65ea0b991c5` matched exactly.
+- The subsequent path-filter commit `a4e41336f00db7ec436c5c59f38875ee17aa5493` also passed exact-head CI [#42038776423](https://github.com/mdznap35/PlayGround/actions/runs/42038776423): Node **67/67**, Python **33/33**, render and artifact upload succeeded. Render deployment `dep-dbm8hf97lnhs738r3lf0` is Live on this commit.
+- Remaining: pre-render missing-asset/rights preflight is not consolidated here; black/frozen-frame and silence analysis, per-profile bitrate thresholds, render IDs/reproducibility manifest, thumbnails, multi-aspect packaging, mobile-ready delivery states and user-facing download/recovery are not yet implemented.
