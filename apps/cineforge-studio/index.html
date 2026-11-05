@@ -45,7 +45,8 @@
         <div class="rail-label">WORKSPACE</div>
         <a class="rail-link active" href="#projectPanel"><span class="rail-icon">✳</span><span>المشروع</span></a>
         <a class="rail-link" href="#storyboardPanel"><span class="rail-icon">▤</span><span>لوحة المشاهد</span></a>
-          <a class="rail-link" href="#mediaBinPanel"><span class="rail-icon">▧</span><span>مكتبة الوسائط</span></a>
+        <a class="rail-link" href="#captionsPanel"><span class="rail-icon">CC</span><span>الترجمة</span></a>
+        <a class="rail-link" href="#mediaBinPanel"><span class="rail-icon">▧</span><span>مكتبة الوسائط</span></a>
         <a class="rail-link" href="./story-planner.html"><span class="rail-icon">✧</span><span>مخطط القصة</span></a>
         <a class="rail-link" href="#exportPanel"><span class="rail-icon">↗</span><span>التصدير</span></a>
         <div class="rail-bottom"><span class="rail-version">BUILD 0.2.0</span><span class="rail-status"><b></b> CORE READY</span></div>
@@ -139,9 +140,38 @@
         </section>
 
 
+        <section class="panel captions-panel" id="captionsPanel">
+          <div class="panel-heading">
+            <div><span class="section-index">04 / CAPTION WORKSPACE</span><h2>الترجمة والتوقيت</h2></div>
+            <span class="panel-tag">SRT · WEBVTT · RTL</span>
+          </div>
+          <p class="caption-intro">استورد ملف SRT أو WebVTT، أو أضف المقاطع يدوياً. اربط كل مقطع بالمشهد المناسب واضبط بدايته ونهايته بدقة. تُحفظ المقاطع مع المشروع وتُرسل إلى المصيّر لدمجها داخل MP4.</p>
+          <div class="caption-toolbar">
+            <button class="primary-button" id="captionImportButton" type="button"><span>استيراد SRT / VTT</span><b>↙</b></button>
+            <input id="captionFile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" hidden>
+            <button class="secondary-button" id="captionExportSrtButton" type="button"><span>تصدير SRT</span><b>↓</b></button>
+            <button class="secondary-button" id="captionExportVttButton" type="button"><span>تصدير VTT</span><b>↓</b></button>
+            <span class="caption-status" id="captionStatus" role="status" aria-live="polite">لا توجد مقاطع ترجمة بعد.</span>
+          </div>
+          <div class="caption-editor">
+            <label class="caption-field"><span>المشهد المرتبط</span><select id="captionScene"></select></label>
+            <label class="caption-field"><span>وقت البداية (ثانية)</span><input id="captionStart" type="number" min="0" step="0.001" inputmode="decimal"></label>
+            <label class="caption-field"><span>وقت النهاية (ثانية)</span><input id="captionEnd" type="number" min="0.001" step="0.001" inputmode="decimal"></label>
+            <label class="caption-field caption-text-field"><span>نص الترجمة (حتى 180 حرفاً / سطرين)</span><textarea id="captionText" maxlength="180" rows="2" dir="auto" placeholder="اكتب الترجمة هنا…"></textarea></label>
+            <div class="caption-form-actions">
+              <button class="primary-button" id="captionSaveButton" type="button">إضافة الترجمة</button>
+              <button class="secondary-button" id="captionCancelButton" type="button" hidden>إلغاء التعديل</button>
+            </div>
+          </div>
+          <div class="caption-list" id="captionList" aria-live="polite">
+            <div class="caption-empty">لا توجد ترجمة بعد. أضف مقطعاً أو استورد ملف SRT / VTT.</div>
+          </div>
+          <p class="caption-footnote">التحقق يمنع المقاطع المتداخلة أو التي تتجاوز مدة الفيديو أو تعبر حدود المشهد المرتبط. الترجمة المدمجة داخل MP4 تكون جزءاً من الصورة النهائية وليست مساراً منفصلاً قابلاً للإخفاء.</p>
+        </section>
+
         <section class="panel media-bin-panel" id="mediaBinPanel">
           <div class="panel-heading">
-            <div><span class="section-index">03 / MEDIA ASSET LIBRARY</span><h2>مكتبة الوسائط</h2></div>
+            <div><span class="section-index">05 / MEDIA ASSET LIBRARY</span><h2>مكتبة الوسائط</h2></div>
             <span class="panel-tag">LOCAL · INDEXEDDB</span>
           </div>
           <p class="media-intro">أضف صورك وصوتك ومقاطعك إلى مكتبة هذا المتصفح. نحفظ بصمة كل ملف ومصدره وترخيصه، ويمكن تعيين الصور للمشهد المحدد والصوت لمسارات المشروع.</p>
@@ -168,7 +198,7 @@
 
         <section class="panel export-panel" id="exportPanel">
           <div class="panel-heading">
-            <div><span class="section-index">04 / DELIVERY PIPELINE</span><h2>إنتاج وتصدير</h2></div>
+            <div><span class="section-index">06 / DELIVERY PIPELINE</span><h2>إنتاج وتصدير</h2></div>
             <span class="engine-badge"><b></b> CPU RENDERER</span>
           </div>
           <div class="pipeline-grid">
@@ -206,6 +236,7 @@
   <script src="./timeline-math.js" defer></script>
   <script src="./media-bin.js" defer></script>
   <script src="./narration-fit.js" defer></script>
+  <script src="./captions.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>

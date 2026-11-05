@@ -121,3 +121,30 @@
 
 /* Scene-level narrative purpose and continuity metadata. */
 .scene-story-meta{display:grid;grid-template-columns:minmax(105px,.45fr) minmax(0,1fr);gap:7px;margin:7px 0}.scene-role-field,.scene-context-field{display:grid;gap:4px;min-width:0;color:#8194ac;font-size:9px}.scene-role-field select,.scene-context-field textarea{width:100%;min-width:0;border:1px solid rgba(151,176,207,.14);border-radius:7px;background:#0a1422;color:#c9d8e8;padding:7px 8px;font:10px var(--font);outline:none}.scene-context-field textarea{resize:vertical;min-height:34px;line-height:1.6}.scene-context-field textarea:focus,.scene-role-field select:focus{border-color:rgba(184,243,211,.5)}.scene-continuity-field{grid-column:1/-1}@media(max-width:680px){.scene-story-meta{grid-template-columns:1fr}.scene-continuity-field{grid-column:auto}}
+
+
+/* Timed Arabic subtitle authoring workspace. */
+.captions-panel{scroll-margin-top:18px}
+.caption-intro,.caption-footnote{margin:0 0 14px;color:var(--muted);font-size:11px;line-height:1.8}
+.caption-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px}
+.caption-toolbar .primary-button,.caption-toolbar .secondary-button{min-height:38px}
+.caption-status{margin-inline-start:auto;color:#a8b9ca;font-size:10px;line-height:1.6}
+.caption-editor{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(120px,.7fr) minmax(120px,.7fr);gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(8,17,30,.56)}
+.caption-field{display:grid;gap:6px;min-width:0;color:#9aacc1;font-size:10px}
+.caption-field select,.caption-field input,.caption-field textarea{width:100%;min-width:0;border:1px solid rgba(151,176,207,.18);border-radius:8px;background:#0a1422;color:#e0eaf4;padding:9px;font:12px var(--font);outline:none}
+.caption-field input{direction:ltr;text-align:left;font-family:var(--latin);font-variant-numeric:tabular-nums}
+.caption-field textarea{resize:vertical;min-height:54px;line-height:1.7}
+.caption-field select:focus,.caption-field input:focus,.caption-field textarea:focus{border-color:rgba(184,243,211,.55);box-shadow:0 0 0 2px rgba(184,243,211,.08)}
+.caption-text-field{grid-column:1/-1}
+.caption-form-actions{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px}
+.caption-list{display:grid;gap:8px;margin-top:12px}
+.caption-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 12px;border:1px solid rgba(151,176,207,.14);border-radius:10px;background:rgba(7,15,27,.48)}
+.caption-item-body{min-width:0;display:grid;gap:4px}
+.caption-time{direction:ltr;text-align:right;color:var(--accent);font:600 10px var(--latin);font-variant-numeric:tabular-nums}
+.caption-item-body p{margin:0;color:#e1eaf4;font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere}
+.caption-item-body small{color:#7f92aa;font-size:9px}
+.caption-item-actions{display:flex;gap:6px;align-items:center}
+.caption-empty{padding:18px;border:1px dashed rgba(151,176,207,.22);border-radius:10px;color:#8092a9;text-align:center;font-size:11px}
+.caption-footnote{margin:12px 0 0;font-size:9px}
+.timeline-lane-subtitle .timeline-clip{background:linear-gradient(90deg,rgba(33,111,92,.95),rgba(20,83,72,.96));border-color:rgba(139,230,194,.48)}
+@media(max-width:680px){.caption-editor{grid-template-columns:1fr 1fr;padding:10px}.caption-editor .caption-field:first-child,.caption-text-field,.caption-form-actions{grid-column:1/-1}.caption-status{width:100%;margin:2px 0 0}.caption-item{grid-template-columns:1fr}.caption-item-actions{justify-content:flex-start}}
