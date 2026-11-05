@@ -1,11 +1,10 @@
 # CineForge — Project State
 
-**Updated:** 2026-11-03  
+**Updated:** 2026-11-05  
 **Active implementation branch:** `feat/cineforge-cinematic-media-v2`  
-**Latest repository head at this snapshot:** `6152f2831a819edb7c940f56e115aba08a52188a`  
-**Latest code/test head:** `8be0553d3d7d6a853e7e3893dfd2830002f5c1a5`  
+**Latest verified implementation/test head:** `4346bd1bed463e0a7a88fd4ee6d407e13d0d35b4` — exact-head CI passed (67 Node tests, 28 Python tests).  
 **Render service:** `srv-dbl0am942hec73dgt93g` — [live site](https://cineforge-studio-b92r.onrender.com/)  
-**Latest Render deploy before this documentation refresh:** `dep-dbl2ugl9el5s73f93bgg` — live on `0b625c4`; newer documentation commits are triggering automatic static redeploys  
+**Verified Render deploy at this implementation head:** `dep-dbm882rbc2fs73atcf00` — Live on `4346bd1`.  
 **Phase PR:** [#12](https://github.com/mdznap35/PlayGround/pull/12), open Draft, base `feat/cineforge-studio-core`; not merged.
 
 ## Product goal
@@ -70,22 +69,22 @@ Files changed on the active branch:
 - The initial CI attempts #13 and #14 failed because a one-scene test fixture requested a duration above the renderer's 90-second per-scene cap. The fixture was corrected, then runs #15–#18 passed.
 
 ## Deployment facts
-- Render hosts the static UI only; video rendering happens in GitHub Actions.
+- Render hosts the static UI only; actual video rendering and FFprobe QA run in GitHub Actions.
 - Auto-deploy branch: `feat/cineforge-cinematic-media-v2`.
-- Latest Render deploy `dep-dbl2se4s728c739dnsb0`: `live` on commit `6304b8091fa1b1d4d73ea86cacea5ff9c6507257`.
+- Verified Render deploy at implementation head `4346bd1`: `dep-dbm882rbc2fs73atcf00`, status `live`.
 - Main studio: https://cineforge-studio-b92r.onrender.com/
 - Story planner: https://cineforge-studio-b92r.onrender.com/story-planner.html
-- A separate browser-based visual/interaction smoke test has not yet been completed in this verification session; Render deployment state confirms static hosting only, and CI verifies code syntax, unit tests and renderer output.
+- The current page now includes the timed-caption panel and loads `captions.js` before `app.js`. A Node contract test checks all literal `$("…")` IDs used by `app.js` against the HTML.
+- The Node contract is not a substitute for a real browser interaction test. Android touch, file picker, IndexedDB persistence/reload and visual RTL inspection still require direct smoke testing.
 
 ## Remaining work
-1. Complete browser-level round-trip verification (planner export → editor import → edit → autosave/reload → job export) and a visual Android browser smoke test with screenshots. These remain unverified.
-2. Show narrative roles, scene purpose and continuity details directly in scene cards; consider splitting a long narrative beat into multiple shots.
-3. Build the media bin and source/rights manifest (Issue #14).
-4. Add Arabic SRT/VTT editing, audio timing and sound QA (Issue #15).
-5. Add multi-track timeline, transitions and overlays (Issue #16).
-6. Expand preflight, QA reports and delivery profiles (Issue #17).
-7. Evaluate optional free video-generation adapters only after current quota, license, region and account eligibility are verified (Issue #18).
-8. Complete phone backup/restore and release checks (Issue #19).
+1. Complete real browser-level round-trip verification (planner export → editor import → edit → autosave/reload → job export) and Android visual/touch smoke tests. The HTML/DOM contract is now tested automatically, but this does not prove interactive browser behavior.
+2. Finish CF-03 acceptance: validate dimensions/duration and rights completeness, support reusable asset links as needed, show missing/unknown-rights preflight warnings, and test file picking/IndexedDB on Android. Media Bin, SHA-256 and ZIP provenance baseline already exist.
+3. Finish CF-04 audio and subtitle quality: subtitle editing/import/export and FFmpeg burn-in are implemented and tested; remaining work includes dedicated 1:1 safe-area tuning, visual checks for Arabic shaping/punctuation/numerals/wrapping, timed voice alignment, ambience/SFX tracks, fades/ducking and peak/clipping QA.
+4. Extend CF-05 from the current project/timeline model to renderable transitions, overlays, video clips and true multi-clip audio mixing. Renderer compatibility must continue rejecting edits it cannot faithfully render.
+5. Expand CF-06 QA with black/frozen-frame and silence checks where measurable, output SHA-256, export profiles, thumbnails and clearer delivery states.
+6. Run the CF-09 CogVideoX-2B proof only after a real free GPU session is verified and an exact model/dependency download manifest is explicitly approved. No model weights are currently downloaded.
+7. Complete phone backup/restore and release checks, including recovery after browser restart.
 
 ## Free-first constraints
 - No paid APIs, paid GPU, paid GitHub runner or paid storage without explicit approval.
@@ -206,3 +205,16 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Snapshot restoration now carries the saved caption list into the restored project, and loading/replacing a project refreshes the subtitle editor form and selected scene.
 - Added regression tests for reorder/delete/duration rebasing and a full static DOM-ID contract test for the editor page.
 - Verified on code/test SHA `4346bd1bed463e0a7a88fd4ee6d407e13d0d35b4` by GitHub Actions run [42035800872](https://github.com/mdznap35/PlayGround/actions/runs/42035800872): 67/67 Node tests and 28/28 Python tests passed; the FFmpeg integration fixture burned an Arabic subtitle into the rendered video. The demo MP4 quality gate also passed at 1920×1080, 24fps, H.264 and 40.0 seconds. Real Android-device acceptance remains outstanding.
+
+
+## Arabic subtitle workflow and page-contract repair — 2026-11-05
+
+- The existing editor code already supported subtitle editing, SRT/WebVTT import/export, scene-linked timed cues, project-v2 persistence and a subtitle timeline lane. Its renderer adapter already projected stable scene IDs and the renderer already accepted `subtitles` under job `schema_version: 1`.
+- A deployment audit found a critical UI integration gap: `app.js` expected `window.CineForgeCaptions` and twelve caption controls, but `index.html` did not load `captions.js` or contain the caption panel. This would stop editor initialization before the rest of the workspace became usable.
+- Fixed the page contract in commit `2c5fe051eb778c22391a0991efb5b9c0dc7416a2`: added the caption panel, import/export controls, scene/time/text editor, navigation link, script ordering and responsive styles. Media Bin and Export section indices were moved to 05 and 06.
+- Added `tests/ui-contract.test.cjs`; it checks that `captions.js` loads before `app.js`, every literal DOM ID referenced by the editor exists in HTML, and renderer-job export includes validated subtitles.
+- The renderer validates scene identity, cue timing, scene bounds, text length and overlaps; it writes an SRT sidecar in the job's temporary workspace and burns it into the video through FFmpeg's subtitle filter before audio muxing. Renderer job schema remains version 1.
+- Added a real SRT line-structure test and extended the image + voice + music integration render fixture with an Arabic subtitle cue in commit `4346bd1bed463e0a7a88fd4ee6d407e13d0d35b4`. This exercises the subtitle FFmpeg path in the end-to-end Python render test.
+- Exact-head workflow [#42035800872](https://github.com/mdznap35/PlayGround/actions/runs/42035800872) passed: Node **67/67**, Python **28/28**, sample render 40 seconds, H.264, 1920×1080, 24 fps, FFprobe checks and artifact upload. Artifact `cineforge-mp4-92`, ID `13418467348`, 5,135,987 bytes.
+- The integration fixture also renders an Arabic subtitle cue with voice and music and checks the resulting H.264/AAC file and duration. No real Android browser screenshot or human visual typography review has been completed; the sample 40-second demo artifact itself is not a subtitle visual proof.
+- PR #12 remains open/Draft and unmerged. No changes were made to `main`; no model weights or paid resources were used.
