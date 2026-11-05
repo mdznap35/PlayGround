@@ -88,7 +88,7 @@ test("clamps arbitrary beat weights and bounds imported text", () => {
 
 
 test("bounds and defaults per-beat intent fields without losing the story snapshot", () => {
-  const result = importer.convert(plan({ beats: [{ title:"مرحلة", prompt:"وصف بصري", content:"نص", share:100, narrative_role:"invalid", purpose:"P".repeat(900), continuity_note:"C".repeat(900) }] }));
+  const result = importer.convert(plan({ target_minutes: 1, beats: [{ title:"مرحلة", prompt:"وصف بصري", content:"نص", share:100, narrative_role:"invalid", purpose:"P".repeat(900), continuity_note:"C".repeat(900) }] }));
   assert.equal(result.scenes[0].narrative_role, "hook");
   assert.equal(result.scenes[0].purpose.length, 300);
   assert.equal(result.scenes[0].continuity_note.length, 500);
