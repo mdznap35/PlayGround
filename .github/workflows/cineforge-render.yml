@@ -20,6 +20,23 @@ on:
       - "apps/cineforge-studio/story-planner.*"
       - "apps/cineforge-studio/tests/**"
       - ".github/workflows/cineforge-render.yml"
+  pull_request:
+    branches:
+      - feat/cineforge-studio-core
+    paths:
+      - "apps/cineforge-studio/jobs/*.json"
+      - "apps/cineforge-studio/jobs/**/*.json"
+      - "apps/cineforge-studio/render.py"
+      - "apps/cineforge-studio/gpu_preflight.py"
+      - "apps/cineforge-studio/app.js"
+      - "apps/cineforge-studio/index.html"
+      - "apps/cineforge-studio/styles.css"
+      - "apps/cineforge-studio/story-plan-import.js"
+      - "apps/cineforge-studio/story-planner.html"
+      - "apps/cineforge-studio/story-planner.css"
+      - "apps/cineforge-studio/story-planner.*"
+      - "apps/cineforge-studio/tests/**"
+      - ".github/workflows/cineforge-render.yml"
   workflow_dispatch:
     inputs:
       job_file:
