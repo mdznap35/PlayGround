@@ -189,3 +189,12 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Added keyboard controls and focus-aware shortcut handling; text-entry controls are excluded so normal editing keystrokes are not intercepted.
 - Added a dependency-free timeline math module with boundary, clamp, progress, frame conversion and ruler interval tests.
 - This is a storyboard/timeline navigation preview, not a rendered video player. It does not enable unsupported trim/split/multi-clip output in renderer v1.
+
+
+## Narrative intent and continuity handoff — 2026-11-05
+
+- Extended story-planner beats with explicit narrative role, purpose and continuity note fields. Defaults are supplied for the seven standard narrative stages, while every field remains editable.
+- The story-plan importer validates and bounds these fields, maps them onto individual renderer-workspace scenes, and retains the complete planning snapshot.
+- Project engine v2 now normalizes and preserves per-scene narrative metadata. The scene editor exposes role selection, purpose and continuity note fields; renderer job JSON includes the metadata without changing `schema_version: 1`.
+- Added importer bounds/default tests, project save/reload metadata tests, and an end-to-end fixture covering planner export → importer → project v2 save/reload → scene metadata projection, while verifying continuity-bible and source records remain intact.
+- This metadata does not itself guarantee visual continuity or alter rendered pixels; it is structured production guidance. Browser/Android smoke testing remains a separate acceptance gate.
