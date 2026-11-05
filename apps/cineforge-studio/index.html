@@ -100,10 +100,35 @@
           <div class="timeline-editor" aria-label="الخط الزمني متعدد المسارات">
             <div class="timeline-editor-heading">
               <div><span class="section-index">03 / EDITING TIMELINE</span><h3>الخط الزمني متعدد المسارات</h3></div>
-              <span class="timeline-hint">اسحب مشاهد الصورة لإعادة ترتيبها · اختر المقطع لفتح المشهد</span>
+              <span class="timeline-hint">انقر على المسطرة للتنقّل · Space للتشغيل · اسحب المشاهد لإعادة ترتيبها</span>
             </div>
-            <div class="timeline-ruler" id="timelineRuler" aria-hidden="true"></div>
-            <div class="multi-track-timeline" id="multiTrackTimeline" aria-live="polite"></div>
+            <div class="timeline-toolbar" role="group" aria-label="أدوات تشغيل الخط الزمني">
+              <div class="timeline-transport">
+                <button class="timeline-control" id="timelineStartButton" type="button" aria-label="الانتقال إلى البداية" title="البداية · Home">⏮</button>
+                <button class="timeline-control" id="timelineFrameBackButton" type="button" aria-label="إطار واحد للخلف" title="إطار للخلف · ←">−1f</button>
+                <button class="timeline-control timeline-play-button" id="timelinePlayButton" type="button" aria-label="تشغيل المعاينة" aria-pressed="false">▶ تشغيل</button>
+                <button class="timeline-control" id="timelineFrameForwardButton" type="button" aria-label="إطار واحد للأمام" title="إطار للأمام · →">+1f</button>
+                <button class="timeline-control" id="timelineEndButton" type="button" aria-label="الانتقال إلى النهاية" title="النهاية · End">⏭</button>
+              </div>
+              <div class="timeline-clock" aria-live="off">
+                <output id="timelineCurrentTime">00:00:00</output><span>/</span><output id="timelineTotalTime">01:00:00</output>
+              </div>
+              <label class="timeline-scrub">
+                <span class="sr-only">موضع التشغيل في الخط الزمني</span>
+                <input id="timelineScrubber" type="range" min="0" max="1440" step="1" value="0" aria-label="موضع التشغيل">
+              </label>
+              <label class="timeline-zoom">
+                <span>التكبير</span>
+                <input id="timelineZoom" type="range" min="100" max="250" step="10" value="100">
+                <output id="timelineZoomValue">100%</output>
+              </label>
+            </div>
+            <div class="timeline-scroll" id="timelineScroll" tabindex="0" aria-label="مساحة الخط الزمني؛ انقر لتغيير موضع التشغيل">
+              <div class="timeline-stage" id="timelineStage">
+                <div class="timeline-ruler" id="timelineRuler" aria-hidden="true"></div>
+                <div class="multi-track-timeline" id="multiTrackTimeline" aria-live="polite"></div>
+              </div>
+            </div>
             <p class="timeline-capability-note">المسارات الصوتية هنا تمثيل زمني للمصادر المرتبطة. المُصيّر الحالي يدمج ملف تعليق واحداً وموسيقى واحدة على كامل مدة الفيديو؛ مزج مقاطع متعددة والانتقالات المتقاطعة ما زالا ضمن مراحل التنفيذ التالية.</p>
           </div>
           <div class="timeline-footer">
@@ -178,6 +203,7 @@
   <script src="./story-plan-import.js" defer></script>
   <script src="./project-engine.js" defer></script>
   <script src="./project-storage.js" defer></script>
+  <script src="./timeline-math.js" defer></script>
   <script src="./media-bin.js" defer></script>
   <script src="./narration-fit.js" defer></script>
   <script src="./app.js" defer></script>
