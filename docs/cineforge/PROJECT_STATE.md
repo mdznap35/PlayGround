@@ -4,7 +4,7 @@
 **Active implementation branch:** `feat/cineforge-cinematic-media-v2`  
 **Latest verified implementation/test head:** `8ff93b6d6b6799e34b035a260390dff24d785807` — exact-head CI passed (67 Node tests, 36 Python tests, subtitle pixel-diff, SHA-256 MP4 QA and advisory black/freeze/silence analysis).  
 **Render service:** `srv-dbl0am942hec73dgt93g` — [live site](https://cineforge-studio-b92r.onrender.com/)  
-**Verified Render deploy at this implementation head:** `dep-dbm8n5m7bikc73enn4r0` — Live on `8ff93b6`.  
+**Verified Render deploy at this implementation head:** `dep-dbm8p53bc2fs73au6e30` — Live on documentation commit `4d645b7`; the last tested code head remains `8ff93b6`.  
 **Phase PR:** [#12](https://github.com/mdznap35/PlayGround/pull/12), open Draft, base `feat/cineforge-studio-core`; not merged.
 
 ## Product goal
@@ -71,7 +71,7 @@ Files changed on the active branch:
 ## Deployment facts
 - Render hosts the static UI only; actual video rendering and FFprobe QA run in GitHub Actions.
 - Auto-deploy branch: `feat/cineforge-cinematic-media-v2`.
-- Verified Render deploy at implementation head `8ff93b6`: `dep-dbm8n5m7bikc73enn4r0`, status `live`.
+- Latest Render deploy: `dep-dbm8p53bc2fs73au6e30`, status `live`, on documentation-only commit `4d645b7`; the tested implementation code head is `8ff93b6`.
 - Main studio: https://cineforge-studio-b92r.onrender.com/
 - Story planner: https://cineforge-studio-b92r.onrender.com/story-planner.html
 - The current page now includes the timed-caption panel and loads `captions.js` before `app.js`. A Node contract test checks all literal `$("…")` IDs used by `app.js` against the HTML.
