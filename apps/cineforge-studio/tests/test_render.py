@@ -21,11 +21,10 @@ class JobValidationTests(unittest.TestCase):
         body = subtitles_srt([{
             "start": 0.5, "end": 2.0, "text": "مرحباً بالعالم"
         }])
-        self.assertEqual(
-            body,
-            "1\\n00:00:00,500 --> 00:00:02,000\\nمرحباً بالعالم\\n"
-        )
-        self.assertNotIn(r"\\n", body)
+        self.assertEqual(body.splitlines(), [
+            "1", "00:00:00,500 --> 00:00:02,000", "مرحباً بالعالم"
+        ])
+        self.assertTrue(body.endswith("\n"))
 
     def test_rejects_missing_scene_list(self):
         with self.assertRaisesRegex(ValueError,"between 1 and"):
