@@ -13,7 +13,7 @@ function plan(overrides = {}) {
     target_minutes: 3,
     wpm: 135,
     beats: [
-      { title: "الخطاف", prompt: "سؤال بصري", content: "هل نحن وحدنا؟", share: 8 },
+      { title: "الخطاف", prompt: "سؤال بصري", content: "هل نحن وحدنا؟", share: 8, narrative_role: "hook", purpose: "فتح سؤال علمي", continuity_note: "العالمة ترتدي المعطف الأزرق في اللقطات التالية." },
       { title: "السياق", prompt: "مقدمة", content: "نراقب السماء.", share: 12 },
       { title: "البداية", prompt: "تلسكوب", content: "نحلل الضوء.", share: 10 },
       { title: "التطوير", prompt: "بيانات", content: "تظهر الإشارات.", share: 30 },
@@ -38,6 +38,9 @@ test("imports Arabic story plan into renderer-safe scene durations", () => {
   assert.ok(result.scenes.every(scene => scene.seconds >= 3 && scene.seconds <= 90));
   assert.equal(result.scenes[0].narration, "هل نحن وحدنا؟");
   assert.equal(result.scenes[0].visual, "سؤال بصري");
+  assert.equal(result.scenes[0].narrative_role, "hook");
+  assert.equal(result.scenes[0].purpose, "فتح سؤال علمي");
+  assert.equal(result.scenes[0].continuity_note, "العالمة ترتدي المعطف الأزرق في اللقطات التالية.");
 });
 
 test("preserves continuity and source provenance in a bounded metadata snapshot", () => {
@@ -81,4 +84,13 @@ test("clamps arbitrary beat weights and bounds imported text", () => {
   assert.equal(result.title.length, 90);
   assert.equal(result.scenes[0].title.length, 100);
   assert.ok(result.scenes[0].seconds >= 3);
+});
+
+
+test("bounds and defaults per-beat intent fields without losing the story snapshot", () => {
+  const result = importer.convert(plan({ beats: [{ title:"مرحلة", prompt:"وصف بصري", content:"نص", share:100, narrative_role:"invalid", purpose:"P".repeat(900), continuity_note:"C".repeat(900) }] }));
+  assert.equal(result.scenes[0].narrative_role, "hook");
+  assert.equal(result.scenes[0].purpose.length, 300);
+  assert.equal(result.scenes[0].continuity_note.length, 500);
+  assert.equal(result.storyContext.beats[0].continuity_note.length, 500);
 });
