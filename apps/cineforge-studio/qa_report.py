@@ -6,6 +6,9 @@ import argparse
 import hashlib
 import json
 import math
+import re
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +27,63 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _filter_durations(log: str, marker: str) -> list[float]:
+    pattern = re.compile(rf"{re.escape(marker)}_duration:\\s*(-?\\d+(?:\\.\\d+)?)")
+    values: list[float] = []
+    for match in pattern.finditer(log):
+        value = float(match.group(1))
+        if math.isfinite(value) and value >= 0:
+            values.append(value)
+    return values
+
+
+def run_content_analysis(video_path: Path, *, include_audio: bool) -> dict[str, Any]:
+    """Run advisory black/freeze/silence detectors in one FFmpeg decode pass."""
+    if not shutil.which("ffmpeg"):
+        return {"status": "unavailable", "reason": "FFmpeg is not available in PATH."}
+    command = [
+        "ffmpeg", "-hide_banner", "-loglevel", "info", "-i", str(video_path),
+        "-vf", "blackdetect=d=2:pix_th=0.10,freezedetect=n=-50dB:d=2",
+    ]
+    if include_audio:
+        command.extend(["-af", "silencedetect=noise=-50dB:d=2"])
+    else:
+        command.append("-an")
+    command.extend(["-f", "null", "-"])
+    try:
+        completed = subprocess.run(
+            command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, timeout=900
+        )
+    except subprocess.TimeoutExpired:
+        return {"status": "unavailable", "reason": "FFmpeg content analysis timed out after 900 seconds."}
+    except OSError as error:
+        return {"status": "unavailable", "reason": str(error)[:300]}
+    if completed.returncode != 0:
+        diagnostic = (completed.stderr or completed.stdout or "No FFmpeg diagnostic.").strip()
+        return {"status": "unavailable", "reason": diagnostic[-1200:]}
+
+    log = (completed.stdout or "") + "\\n" + (completed.stderr or "")
+    black = _filter_durations(log, "black")
+    frozen = _filter_durations(log, "freeze")
+    silence = _filter_durations(log, "silence") if include_audio else []
+    return {
+        "status": "completed",
+        "thresholds": {
+            "black_segment_seconds": 2.0,
+            "frozen_segment_seconds": 2.0,
+            "silence_segment_seconds": 2.0,
+            "silence_noise_db": -50,
+        },
+        "audio_analyzed": include_audio,
+        "black_segments_seconds": black,
+        "frozen_segments_seconds": frozen,
+        "silence_segments_seconds": silence,
+        "warning_count": len(black) + len(frozen) + len(silence),
+        "policy": "Advisory only; intentional dark, static or silent passages require human review.",
+    }
 
 
 def _number(value: Any, label: str) -> float:
@@ -149,6 +209,9 @@ def main(argv: list[str] | None = None) -> int:
     job = json.loads(args.job.read_text(encoding="utf-8"))
     probe = json.loads(args.probe.read_text(encoding="utf-8"))
     report = build_qa_report(job, probe, args.video)
+    report["content_analysis"] = run_content_analysis(
+        args.video, include_audio=report["audio_found"]
+    )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(report, ensure_ascii=False, indent=2))
