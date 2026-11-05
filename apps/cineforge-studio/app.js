@@ -172,9 +172,10 @@
   function syncTimelinePlayhead() {
     const total = totalSeconds();
     playheadTime = timelineMath.clampTime(playheadTime, total);
+    const progress = timelineMath.progress(playheadTime, total);
     const stage = $("timelineStage");
     if (stage) {
-      stage.style.setProperty("--timeline-playhead", (timelineMath.progress(playheadTime, total) * 100) + "%");
+      stage.style.setProperty("--timeline-playhead", (progress * 100) + "%");
       stage.style.width = timelineZoom + "%";
     }
     const scrubber = $("timelineScrubber");
