@@ -97,9 +97,9 @@ class QaReportTests(unittest.TestCase):
             returncode=0,
             stdout="",
             stderr=(
-                "[blackdetect] black_duration:2.5\\n"
-                "[freezedetect] freeze_duration:3.0\\n"
-                "[silencedetect] silence_duration:4.25\\n"
+                "[blackdetect] black_duration:2.5\n"
+                "[freezedetect] freeze_duration:3.0\n"
+                "[silencedetect] silence_duration:4.25\n"
             ),
         )
         with tempfile.TemporaryDirectory() as folder:

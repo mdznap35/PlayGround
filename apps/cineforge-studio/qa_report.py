@@ -30,7 +30,7 @@ def sha256_file(path: Path) -> str:
 
 
 def _filter_durations(log: str, marker: str) -> list[float]:
-    pattern = re.compile(rf"{re.escape(marker)}_duration:\\s*(-?\\d+(?:\\.\\d+)?)")
+    pattern = re.compile(rf"{re.escape(marker)}_duration:\s*(-?\d+(?:\.\d+)?)")
     values: list[float] = []
     for match in pattern.finditer(log):
         value = float(match.group(1))
@@ -65,7 +65,7 @@ def run_content_analysis(video_path: Path, *, include_audio: bool) -> dict[str, 
         diagnostic = (completed.stderr or completed.stdout or "No FFmpeg diagnostic.").strip()
         return {"status": "unavailable", "reason": diagnostic[-1200:]}
 
-    log = (completed.stdout or "") + "\\n" + (completed.stderr or "")
+    log = (completed.stdout or "") + "\n" + (completed.stderr or "")
     black = _filter_durations(log, "black")
     frozen = _filter_durations(log, "freeze")
     silence = _filter_durations(log, "silence") if include_audio else []
