@@ -151,3 +151,8 @@ Project restore is revision-monotonic: restoring an older snapshot creates a new
 ## Timeline transport and review controls
 
 The timeline includes a frame-addressable playhead, sequenced storyboard preview transport, direct ruler/empty-lane seeking, zoom from 100% to 250%, and keyboard controls (Space to play/pause, Left/Right to step one frame, Shift+Left/Right to step one second, Home/End to jump). The preview advances through the selected storyboard's scene artwork; it is not a final encoded video preview. This navigation layer does not enable unsupported trim/split/multi-clip output in renderer v1. The renderer-compatibility gate remains authoritative.
+
+
+### Narrative intent and continuity handoff
+
+Each story-planner beat now carries an explicit narrative role, an editable audience-facing purpose, and a continuity note. The importer maps these fields into the corresponding editor scene; project v2 preserves them through save/reload and the renderer-job scene metadata projection. The scene editor exposes all three fields for revision, while the full planning snapshot continues to retain the story bible and research sources. These fields are editorial metadata: they guide production and review but do not claim to generate or enforce visual continuity automatically. Dedicated tests cover field bounds, defaults and the planner → importer → project save/reload round trip.
