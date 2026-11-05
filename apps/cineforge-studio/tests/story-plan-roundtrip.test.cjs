@@ -42,7 +42,8 @@ test("story planner export survives import, project save, reload and renderer-jo
     selectedScene:editor.selectedScene,
     storyPlan:editor.storyPlan
   },project);
-  const rendererSceneMetadata=reSaved.scenes.map(scene=>({
+  const rendererScenes=projectEngine.toRendererScenes(reSaved.scenes);
+  const rendererSceneMetadata=rendererScenes.map(scene=>({
     narrative_role:scene.narrative_role,
     purpose:scene.purpose,
     continuity_note:scene.continuity_note
