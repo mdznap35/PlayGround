@@ -181,3 +181,18 @@ test("preserves scene narrative role, purpose and continuity through project rou
   assert.equal(restored.scenes[0].purpose,"فتح سؤال يثير الفضول");
   assert.equal(restored.scenes[0].continuity_note,"المعطف الأزرق ثابت في جميع لقطات المرصد.");
 });
+
+
+test("projects narrative metadata into the renderer job without changing scene timing or asset paths", () => {
+  const state=editorState();
+  state.scenes[0].narrative_role="hook";
+  state.scenes[0].purpose="فتح سؤال مركزي";
+  state.scenes[0].continuity_note="المعطف الأزرق لا يتغير.";
+  const projected=engine.toRendererScenes(state.scenes);
+  assert.deepEqual(projected[0],{
+    title:"الأول",narration:"نص",visual:"وصف",narrative_role:"hook",
+    purpose:"فتح سؤال مركزي",continuity_note:"المعطف الأزرق لا يتغير.",
+    image_file:"assets/a.webp",camera_move:"push_in",seconds:10
+  });
+  assert.equal(projected[1].image_file,null);
+});
