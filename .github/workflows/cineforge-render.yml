@@ -150,33 +150,12 @@ jobs:
           mkdir -p dist
           python apps/cineforge-studio/render.py "${{ steps.job.outputs.file }}" --output dist/cineforge.mp4
 
-      - name: Inspect MP4 streams and technical profile
+      - name: Inspect MP4 and write SHA-256 QA report
         env:
           JOB_FILE: ${{ steps.job.outputs.file }}
         run: |
-          ffprobe -v error -show_entries format=duration,size -show_entries stream=codec_type,codec_name,width,height,r_frame_rate -of json dist/cineforge.mp4 > dist/ffprobe.json
-          python - <<'PY'
-          import json, os, pathlib
-          probe=json.load(open("dist/ffprobe.json",encoding="utf-8"))
-          job=json.load(open(os.environ["JOB_FILE"],encoding="utf-8"))
-          video=next((s for s in probe.get("streams",[]) if s.get("codec_type")=="video"),None)
-          if not video or video.get("codec_name")!="h264": raise SystemExit("Quality gate: H.264 video stream missing.")
-          expected={"16:9":(1920,1080),"9:16":(1080,1920),"1:1":(1080,1080)}[job.get("aspect","16:9")]
-          if (video.get("width"),video.get("height"))!=expected: raise SystemExit("Quality gate: unexpected video dimensions.")
-          if video.get("r_frame_rate") not in ("24/1","25/1","30/1"): raise SystemExit("Quality gate: unexpected frame rate.")
-          expected_duration=sum(int(s.get("seconds",8)) for s in job["scenes"])
-          actual_duration=float(probe.get("format",{}).get("duration",0))
-          if abs(actual_duration-expected_duration)>0.8: raise SystemExit("Quality gate: duration differs from the project timeline.")
-          audio_expected=bool(job.get("audio_file") or job.get("voiceover_file") or job.get("music_file"))
-          audio_found=any(s.get("codec_type")=="audio" for s in probe.get("streams",[]))
-          if audio_expected and not audio_found: raise SystemExit("Quality gate: requested audio stream missing.")
-          report={"project_title":job.get("title"),"expected_dimensions":expected,"expected_duration":expected_duration,
-                  "actual_duration":actual_duration,"video":video,"audio_expected":audio_expected,
-                  "audio_found":audio_found,"format":probe.get("format")}
-          pathlib.Path("dist/render-report.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
-          print(json.dumps(report,ensure_ascii=False,indent=2))
-          PY
-
+          ffprobe -v error -show_entries format=duration,size,bit_rate -show_entries stream=codec_type,codec_name,width,height,r_frame_rate,avg_frame_rate,bit_rate,sample_rate,channels,channel_layout -of json dist/cineforge.mp4 > dist/ffprobe.json
+          python apps/cineforge-studio/qa_report.py --job "$JOB_FILE" --video dist/cineforge.mp4 --probe dist/ffprobe.json --output dist/render-report.json
       - name: Upload video and QA report
         uses: actions/upload-artifact@v4
         with:
