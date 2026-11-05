@@ -36,6 +36,9 @@
       title: clean(item.title, 100, "مشهد " + (index + 1)),
       narration: clean(item.narration, 700, ""),
       visual: clean(item.visual, 500, ""),
+      narrative_role: clean(item.narrative_role, 40, "story_beat"),
+      purpose: clean(item.purpose, 300, ""),
+      continuity_note: clean(item.continuity_note, 500, ""),
       image_file: clean(item.image_file, 180, ""),
       camera_move: clean(item.camera_move, 24, "push_in"),
       seconds: Math.max(3, Math.min(90, Math.round(finite(item.seconds, 8))))
