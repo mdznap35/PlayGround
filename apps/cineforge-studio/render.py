@@ -91,6 +91,9 @@ def validate_job(job: Any) -> dict[str, Any]:
             raise ValueError(f"Scene {index}: seconds must be 3–{MAX_SCENE_SECONDS}.")
         if len(scene_title) > 100 or len(narration) > MAX_TEXT or len(visual) > 500:
             raise ValueError(f"Scene {index}: text is longer than the allowed limit.")
+        scene_id = scene.get("id", "scene-" + str(index))
+        if not isinstance(scene_id, str) or not scene_id.strip() or len(scene_id) > 120:
+            raise ValueError(f"Scene {index}: id must be a non-empty string up to 120 characters.")
         camera = scene.get("camera_move", "push_in")
         if not isinstance(camera, str) or camera not in CAMERA_MOVES:
             raise ValueError(f"Scene {index}: unsupported camera_move.")
@@ -106,13 +109,56 @@ def validate_job(job: Any) -> dict[str, Any]:
             raise ValueError(f"Scene {index}: continuity_note must be text up to 500 characters.")
         image_file = validate_media_reference(scene.get("image_file"), f"Scene {index} image_file", IMAGE_EXTENSIONS, "assets")
         total += seconds
-        normalized.append({"title":scene_title[:100],"narration":narration[:MAX_TEXT],"visual":visual[:500],
+        normalized.append({"id":scene_id.strip(),"title":scene_title[:100],"narration":narration[:MAX_TEXT],"visual":visual[:500],
                            "narrative_role":narrative_role,"purpose":purpose,"continuity_note":continuity_note,
                            "seconds":seconds,"camera_move":camera,"image_file":image_file})
     if total > MAX_TOTAL_SECONDS:
         raise ValueError(f"Total duration exceeds {MAX_TOTAL_SECONDS} seconds.")
+    scene_ranges = {}
+    scene_cursor = 0.0
+    for scene in normalized:
+        scene_ranges[scene["id"]] = (scene_cursor, scene_cursor + scene["seconds"])
+        scene_cursor += scene["seconds"]
+    subtitles = job.get("subtitles", [])
+    if not isinstance(subtitles, list) or len(subtitles) > 500:
+        raise ValueError("subtitles must contain between 0 and 500 cues.")
+    normalized_subtitles, subtitle_ids = [], set()
+    for index, cue in enumerate(subtitles, 1):
+        if not isinstance(cue, dict):
+            raise ValueError(f"Subtitle {index} must be an object.")
+        cue_id = cue.get("id")
+        scene_id = cue.get("scene_id")
+        text = cue.get("text")
+        if not isinstance(cue_id, str) or not cue_id.strip() or len(cue_id) > 120 or cue_id in subtitle_ids:
+            raise ValueError(f"Subtitle {index}: id must be unique text up to 120 characters.")
+        subtitle_ids.add(cue_id)
+        if not isinstance(scene_id, str) or scene_id not in scene_ranges:
+            raise ValueError(f"Subtitle {index}: scene_id does not reference a known scene.")
+        if not isinstance(text, str):
+            raise ValueError(f"Subtitle {index}: text must be a string.")
+        text = text.replace("\\x00", "").strip()
+        if not text or len(text) > 180 or len(text.splitlines()) > 2:
+            raise ValueError(f"Subtitle {index}: text must be 1–180 characters on at most two lines.")
+        raw_start, raw_end = cue.get("start"), cue.get("end")
+        if isinstance(raw_start, bool) or isinstance(raw_end, bool):
+            raise ValueError(f"Subtitle {index}: start and end must be numeric.")
+        try:
+            start, end = float(raw_start), float(raw_end)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Subtitle {index}: start and end must be numeric.") from exc
+        if not math.isfinite(start) or not math.isfinite(end) or start < 0 or end <= start or end > total + 0.001:
+            raise ValueError(f"Subtitle {index}: invalid time range.")
+        scene_start, scene_end = scene_ranges[scene_id]
+        if start < scene_start - 0.001 or end > scene_end + 0.001:
+            raise ValueError(f"Subtitle {index}: cue must fit inside its linked scene.")
+        normalized_subtitles.append({"id":cue_id,"scene_id":scene_id,"start":start,"end":end,"text":text})
+    normalized_subtitles.sort(key=lambda cue: (cue["start"], cue["end"]))
+    for index in range(1, len(normalized_subtitles)):
+        if normalized_subtitles[index]["start"] < normalized_subtitles[index-1]["end"] - 0.001:
+            raise ValueError("Subtitle cues must not overlap.")
     result = dict(job)
     result.update({"title":title,"aspect":aspect,"style":style,"fps":fps,"scenes":normalized,
+                   "subtitles":normalized_subtitles,
                    "audio_file":legacy_audio,"voiceover_file":voiceover,"music_file":music,
                    "music_volume":music_volume,"voiceover_volume":voiceover_volume})
     return result
@@ -244,6 +290,31 @@ def camera_filter(move,fps,seconds,width,height):
     return (f"scale={width}:{height},zoompan=z='{zoom}':x='{x}':y='{y}':d=1:s={width}x{height}:fps={fps},"
             "fade=t=in:st=0:d=0.45,"+f"fade=t=out:st={max(0,seconds-.45):.3f}:d=0.45,format=yuv420p")
 
+def srt_timestamp(seconds: float) -> str:
+    milliseconds = max(0, round(float(seconds) * 1000))
+    hours, remainder = divmod(milliseconds, 3_600_000)
+    minutes, remainder = divmod(remainder, 60_000)
+    secs, millis = divmod(remainder, 1000)
+    return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+
+def subtitles_srt(cues: list[dict[str, Any]]) -> str:
+    return "\\n\\n".join(
+        f"{index}\\n{srt_timestamp(cue['start'])} --> {srt_timestamp(cue['end'])}\\n{cue['text']}"
+        for index, cue in enumerate(cues, 1)
+    ) + ("\\n" if cues else "")
+
+def burn_subtitles(video_path: Path, subtitle_path: Path, output_path: Path, aspect: str) -> None:
+    filter_path = str(subtitle_path.resolve()).replace("\\\\", "\\\\\\\\").replace(":", "\\\\:").replace("'", "\\\\'")
+    margin = 130 if aspect == "9:16" else 78
+    font_size = 48 if aspect == "9:16" else 42
+    style = f"FontName=DejaVu Sans,FontSize={font_size},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV={margin},WrapStyle=2"
+    subtitle_filter = f"subtitles=filename='{filter_path}':force_style='{style}'"
+    run_ffmpeg([
+        "ffmpeg","-hide_banner","-loglevel","error","-y","-i",str(video_path),
+        "-vf",subtitle_filter,"-an","-c:v","libx264","-preset","veryfast","-crf","20",
+        "-pix_fmt","yuv420p","-movflags","+faststart",str(output_path)
+    ])
+
 def render_audio(job,job_dir,silent_video,output_path,total_seconds):
     legacy=job.get("audio_file")
     voice_name,music_name=job.get("voiceover_file"),job.get("music_file")
@@ -303,7 +374,14 @@ def render(job_path,output_path):
         silent=temp/"silent.mp4"
         run_ffmpeg(["ffmpeg","-hide_banner","-loglevel","error","-y","-f","concat","-safe","0","-i",str(concat),
                     "-c","copy","-movflags","+faststart",str(silent)])
-        render_audio(job,job_dir,silent,output_path,total_seconds)
+        video_for_audio = silent
+        if job["subtitles"]:
+            subtitle_file = temp / "captions.srt"
+            subtitle_file.write_text(subtitles_srt(job["subtitles"]), encoding="utf-8")
+            subtitled = temp / "subtitled.mp4"
+            burn_subtitles(silent, subtitle_file, subtitled, job["aspect"])
+            video_for_audio = subtitled
+        render_audio(job,job_dir,video_for_audio,output_path,total_seconds)
     return output_path
 
 def main():
