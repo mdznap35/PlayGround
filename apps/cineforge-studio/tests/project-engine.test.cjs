@@ -168,3 +168,16 @@ test("renderer compatibility rejects duplicate music lanes", () => {
   project.timeline.tracks[3].id="track-music-copy";
   assert.equal(engine.rendererCompatibility(project).ok,false);
 });
+
+
+test("preserves scene narrative role, purpose and continuity through project round-trip", () => {
+  const state=editorState();
+  state.scenes[0].narrative_role="hook";
+  state.scenes[0].purpose="فتح سؤال يثير الفضول";
+  state.scenes[0].continuity_note="المعطف الأزرق ثابت في جميع لقطات المرصد.";
+  const project=engine.createProject(state);
+  const restored=engine.toEditorState(engine.normalizeProject(JSON.parse(JSON.stringify(project))));
+  assert.equal(restored.scenes[0].narrative_role,"hook");
+  assert.equal(restored.scenes[0].purpose,"فتح سؤال يثير الفضول");
+  assert.equal(restored.scenes[0].continuity_note,"المعطف الأزرق ثابت في جميع لقطات المرصد.");
+});
