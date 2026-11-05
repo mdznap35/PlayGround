@@ -50,6 +50,7 @@
     return scenes.map((raw, index) => {
       const scene = normalizeScene(raw, index);
       return {
+        id:scene.id,
         title:scene.title,
         narration:scene.narration,
         visual:scene.visual,
@@ -80,7 +81,7 @@
       const text = clean(cue.text,180,"");
       const sceneId = clean(cue.scene_id,120,"");
       if (!id || !Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) throw new TypeError("توقيت مقطع الترجمة غير صالح.");
-      if (!text || text.split("\\n").length > 2) throw new TypeError("نص الترجمة يجب أن يكون سطراً أو سطرين.");
+      if (!text || text.split("\n").length > 2) throw new TypeError("نص الترجمة يجب أن يكون سطراً أو سطرين.");
       const range = ranges.get(sceneId);
       if (!range) throw new TypeError("المشهد المرتبط بمقطع الترجمة غير موجود.");
       if (start < range.start - 0.001 || end > range.end + 0.001) throw new RangeError("يجب أن يقع مقطع الترجمة كاملاً داخل مدة المشهد المرتبط به.");
