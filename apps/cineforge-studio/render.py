@@ -94,9 +94,20 @@ def validate_job(job: Any) -> dict[str, Any]:
         camera = scene.get("camera_move", "push_in")
         if not isinstance(camera, str) or camera not in CAMERA_MOVES:
             raise ValueError(f"Scene {index}: unsupported camera_move.")
+        narrative_role = scene.get("narrative_role", "story_beat")
+        allowed_roles = {"hook", "context", "setup", "development", "turning_point", "resolution", "closing", "story_beat"}
+        if not isinstance(narrative_role, str) or narrative_role not in allowed_roles:
+            raise ValueError(f"Scene {index}: unsupported narrative_role.")
+        purpose = scene.get("purpose", "")
+        continuity_note = scene.get("continuity_note", "")
+        if not isinstance(purpose, str) or len(purpose) > 300:
+            raise ValueError(f"Scene {index}: purpose must be text up to 300 characters.")
+        if not isinstance(continuity_note, str) or len(continuity_note) > 500:
+            raise ValueError(f"Scene {index}: continuity_note must be text up to 500 characters.")
         image_file = validate_media_reference(scene.get("image_file"), f"Scene {index} image_file", IMAGE_EXTENSIONS, "assets")
         total += seconds
         normalized.append({"title":scene_title[:100],"narration":narration[:MAX_TEXT],"visual":visual[:500],
+                           "narrative_role":narrative_role,"purpose":purpose,"continuity_note":continuity_note,
                            "seconds":seconds,"camera_move":camera,"image_file":image_file})
     if total > MAX_TOTAL_SECONDS:
         raise ValueError(f"Total duration exceeds {MAX_TOTAL_SECONDS} seconds.")
