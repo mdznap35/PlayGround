@@ -185,7 +185,7 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 ## Timeline transport and review surface — 2026-11-05
 
 - Added a frame-addressable playhead and sequenced storyboard preview transport (play/pause, start/end, single-frame and one-second stepping).
-- Added direct seeking from the ruler and empty video-lane areas, synchronized active-scene highlighting, a time scrubber, and horizontal zoom for narrow/mobile screens.
+- Added direct seeking from the ruler and empty video-lane areas, synchronized active-scene highlighting, a time scrubber, and horizontal zoom for narrow/mobile screens. The playhead auto-follows within the scrolled viewport, and playback pauses when the document is hidden.
 - Added keyboard controls and focus-aware shortcut handling; text-entry controls are excluded so normal editing keystrokes are not intercepted.
 - Added a dependency-free timeline math module with boundary, clamp, progress, frame conversion and ruler interval tests.
 - This is a storyboard/timeline navigation preview, not a rendered video player. It does not enable unsupported trim/split/multi-clip output in renderer v1.
