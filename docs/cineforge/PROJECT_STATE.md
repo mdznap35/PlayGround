@@ -205,4 +205,4 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Scene reordering, deletion and duration changes now preserve remaining cue positions relative to their scenes; cues belonging to removed scenes or outside a shortened scene are removed.
 - Snapshot restoration now carries the saved caption list into the restored project, and loading/replacing a project refreshes the subtitle editor form and selected scene.
 - Added regression tests for reorder/delete/duration rebasing and a full static DOM-ID contract test for the editor page.
-- Exact-head GitHub Actions and a real Android browser acceptance pass remain required before closing this work item.
+- Verified on code/test SHA `4346bd1bed463e0a7a88fd4ee6d407e13d0d35b4` by GitHub Actions run [42035800872](https://github.com/mdznap35/PlayGround/actions/runs/42035800872): 67/67 Node tests and 28/28 Python tests passed; the FFmpeg integration fixture burned an Arabic subtitle into the rendered video. The demo MP4 quality gate also passed at 1920×1080, 24fps, H.264 and 40.0 seconds. Real Android-device acceptance remains outstanding.
