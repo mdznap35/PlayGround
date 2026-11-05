@@ -146,3 +146,8 @@ Project files can be reopened with **فتح ملف مشروع محفوظ**. Impo
 
 
 Project restore is revision-monotonic: restoring an older snapshot creates a new revision above the current head instead of reverting the revision counter. Reopening a project with the same project ID also creates a new checkpoint above the currently stored revision. Import rejects non-empty subtitle/overlay lanes and mismatched audio source/timing metadata because the current renderer does not yet implement those lanes.
+
+
+## Timeline transport and review controls
+
+The timeline includes a frame-addressable playhead, sequenced storyboard preview transport, direct ruler/empty-lane seeking, zoom from 100% to 250%, and keyboard controls (Space to play/pause, Left/Right to step one frame, Shift+Left/Right to step one second, Home/End to jump). The preview advances through the selected storyboard's scene artwork; it is not a final encoded video preview. This navigation layer does not enable unsupported trim/split/multi-clip output in renderer v1. The renderer-compatibility gate remains authoritative.
