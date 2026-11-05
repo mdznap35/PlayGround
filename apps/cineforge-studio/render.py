@@ -298,13 +298,13 @@ def srt_timestamp(seconds: float) -> str:
     return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
 
 def subtitles_srt(cues: list[dict[str, Any]]) -> str:
-    return "\\n\\n".join(
-        f"{index}\\n{srt_timestamp(cue['start'])} --> {srt_timestamp(cue['end'])}\\n{cue['text']}"
+    return "\n\n".join(
+        f"{index}\n{srt_timestamp(cue['start'])} --> {srt_timestamp(cue['end'])}\n{cue['text']}"
         for index, cue in enumerate(cues, 1)
-    ) + ("\\n" if cues else "")
+    ) + ("\n" if cues else "")
 
 def burn_subtitles(video_path: Path, subtitle_path: Path, output_path: Path, aspect: str) -> None:
-    filter_path = str(subtitle_path.resolve()).replace("\\\\", "\\\\\\\\").replace(":", "\\\\:").replace("'", "\\\\'")
+    filter_path = str(subtitle_path.resolve()).replace("\\\\", "/").replace(":", "\\:").replace("'", "\\'")
     margin = 130 if aspect == "9:16" else 78
     font_size = 48 if aspect == "9:16" else 42
     style = f"FontName=DejaVu Sans,FontSize={font_size},PrimaryColour=&H00FFFFFF,OutlineColour=&H00101010,BorderStyle=1,Outline=2,Shadow=0,Alignment=2,MarginV={margin},WrapStyle=2"
