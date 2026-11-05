@@ -2,9 +2,9 @@
 
 **Updated:** 2026-11-05  
 **Active implementation branch:** `feat/cineforge-cinematic-media-v2`  
-**Latest verified implementation/test head:** `a4e41336f00db7ec436c5c59f38875ee17aa5493` — exact-head CI passed (67 Node tests, 33 Python tests, subtitle pixel-diff and hash-backed MP4 QA).  
+**Latest verified implementation/test head:** `8ff93b6d6b6799e34b035a260390dff24d785807` — exact-head CI passed (67 Node tests, 36 Python tests, subtitle pixel-diff, SHA-256 MP4 QA and advisory black/freeze/silence analysis).  
 **Render service:** `srv-dbl0am942hec73dgt93g` — [live site](https://cineforge-studio-b92r.onrender.com/)  
-**Verified Render deploy at this implementation head:** `dep-dbm8hf97lnhs738r3lf0` — Live on `a4e4133`.  
+**Verified Render deploy at this implementation head:** `dep-dbm8n5m7bikc73enn4r0` — Live on `8ff93b6`.  
 **Phase PR:** [#12](https://github.com/mdznap35/PlayGround/pull/12), open Draft, base `feat/cineforge-studio-core`; not merged.
 
 ## Product goal
@@ -71,7 +71,7 @@ Files changed on the active branch:
 ## Deployment facts
 - Render hosts the static UI only; actual video rendering and FFprobe QA run in GitHub Actions.
 - Auto-deploy branch: `feat/cineforge-cinematic-media-v2`.
-- Verified Render deploy at implementation head `a4e4133`: `dep-dbm8hf97lnhs738r3lf0`, status `live`.
+- Verified Render deploy at implementation head `8ff93b6`: `dep-dbm8n5m7bikc73enn4r0`, status `live`.
 - Main studio: https://cineforge-studio-b92r.onrender.com/
 - Story planner: https://cineforge-studio-b92r.onrender.com/story-planner.html
 - The current page now includes the timed-caption panel and loads `captions.js` before `app.js`. A Node contract test checks all literal `$("…")` IDs used by `app.js` against the HTML.
@@ -82,7 +82,7 @@ Files changed on the active branch:
 2. Finish CF-03 acceptance: validate dimensions/duration and rights completeness, support reusable asset links as needed, show missing/unknown-rights preflight warnings, and test file picking/IndexedDB on Android. Media Bin, SHA-256 and ZIP provenance baseline already exist.
 3. Finish CF-04 audio and subtitle quality: subtitle editing/import/export and FFmpeg burn-in are implemented and tested; remaining work includes dedicated 1:1 safe-area tuning, visual checks for Arabic shaping/punctuation/numerals/wrapping, timed voice alignment, ambience/SFX tracks, fades/ducking and peak/clipping QA.
 4. Extend CF-05 from the current project/timeline model to renderable transitions, overlays, video clips and true multi-clip audio mixing. Renderer compatibility must continue rejecting edits it cannot faithfully render.
-5. Expand CF-06 QA with black/frozen-frame and silence checks, bitrate thresholds per profile, render IDs/reproducibility manifest, export profiles, thumbnails and clearer delivery states. The post-render SHA-256/size/codec/profile report now exists and is tested.
+5. Expand CF-06 QA with human review of black/frozen/silence warnings, clipping/loudness checks, bitrate thresholds per profile, render IDs/reproducibility manifest, export profiles, thumbnails and clearer delivery states. The post-render SHA-256/size/codec/profile report and advisory black/frozen/silence analysis now exist and are tested.
 6. Run the CF-09 CogVideoX-2B proof only after a real free GPU session is verified and an exact model/dependency download manifest is explicitly approved. No model weights are currently downloaded.
 7. Complete phone backup/restore and release checks, including recovery after browser restart.
 
@@ -234,3 +234,17 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 - Independently downloaded artifact `cineforge-mp4-103` (ID `13418744193`) and verified its report values against the actual MP4 bytes: size **5,195,656** bytes and SHA-256 `781be50024ed984628f5400233ae0fb766603416759eacbb56c4f65ea0b991c5` matched exactly.
 - The subsequent path-filter commit `a4e41336f00db7ec436c5c59f38875ee17aa5493` also passed exact-head CI [#42038776423](https://github.com/mdznap35/PlayGround/actions/runs/42038776423): Node **67/67**, Python **33/33**, render and artifact upload succeeded. Render deployment `dep-dbm8hf97lnhs738r3lf0` is Live on this commit.
 - Remaining: pre-render missing-asset/rights preflight is not consolidated here; black/frozen-frame and silence analysis, per-profile bitrate thresholds, render IDs/reproducibility manifest, thumbnails, multi-aspect packaging, mobile-ready delivery states and user-facing download/recovery are not yet implemented.
+
+
+## Content-aware delivery QA — 2026-11-05
+
+- Extended `apps/cineforge-studio/qa_report.py` with a single FFmpeg decode pass using `blackdetect=d=2:pix_th=0.10`, `freezedetect=n=-50dB:d=2`, and `silencedetect=noise=-50dB:d=2` when an audio stream exists.
+- The analyzer records thresholds, segment durations and warning count in `render-report.json`. It is explicitly advisory: intentional black, static or silent passages must be reviewed by a person, not automatically rejected.
+- Added tests for black/freeze/silence log parsing, the silent-job branch (no audio filter), and graceful FFmpeg-unavailable behavior.
+- Extended the real image + voice + music + Arabic-subtitle integration render test to invoke content analysis with `include_audio=True`, thereby executing the silence filter on an actual audio-bearing MP4.
+- Fixed the FFmpeg log marker regex and newline parsing before accepting the latest CI run.
+- Exact-head workflow [#42040590337](https://github.com/mdznap35/PlayGround/actions/runs/42040590337) passed on `8ff93b6d6b6799e34b035a260390dff24d785807`: Node **67/67**, Python **36/36**, 40-second MP4 render, FFprobe and artifact upload.
+- Latest demo content-analysis result: no black segments >=2 seconds; two frozen intervals of **7.125 seconds** each; silence analysis correctly skipped because this sample has no audio. The separate image + voice + music integration fixture does run the silence detector.
+- Artifact `cineforge-mp4-111`, ID `13421930537`: independently downloaded and unpacked. Its MP4 is **5,195,656 bytes** and SHA-256 `781be50024ed984628f5400233ae0fb766603416759eacbb56c4f65ea0b991c5`; both values exactly matched `render-report.json`.
+- Render deployment `dep-dbm8n5m7bikc73enn4r0` is Live on `8ff93b6`.
+- Remaining: warning classification/threshold tuning, actual black/frozen visual confirmation, audio loudness/clipping and silence policy, final frame/audio-tail checks, per-profile size/bitrate gates, reproducibility manifest/render ID, thumbnails, and mobile delivery UX. The demo's two freeze warnings are not yet adjudicated as a defect.
