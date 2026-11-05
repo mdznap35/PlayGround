@@ -32,6 +32,29 @@ class JobValidationTests(unittest.TestCase):
     def test_rejects_unsupported_schema(self):
         job=sample_job(); job["schema_version"]=99
         with self.assertRaisesRegex(ValueError,"Unsupported schema"): validate_job(job)
+    def test_scene_narrative_metadata_survives_renderer_validation(self):
+        job = sample_job()
+        job["scenes"][0].update({
+            "narrative_role": "hook",
+            "purpose": "فتح سؤال مركزي",
+            "continuity_note": "المعطف الأزرق ثابت في لقطات المرصد."
+        })
+        result = validate_job(job)
+        self.assertEqual(result["schema_version"], 1)
+        self.assertEqual(result["scenes"][0]["narrative_role"], "hook")
+        self.assertEqual(result["scenes"][0]["purpose"], "فتح سؤال مركزي")
+        self.assertEqual(result["scenes"][0]["continuity_note"], "المعطف الأزرق ثابت في لقطات المرصد.")
+
+    def test_rejects_invalid_scene_narrative_metadata(self):
+        job = sample_job()
+        job["scenes"][0]["narrative_role"] = "invented-role"
+        with self.assertRaisesRegex(ValueError, "unsupported narrative_role"):
+            validate_job(job)
+        job = sample_job()
+        job["scenes"][0]["continuity_note"] = "x" * 501
+        with self.assertRaisesRegex(ValueError, "continuity_note"):
+            validate_job(job)
+
     def test_story_context_metadata_is_preserved_without_changing_renderer_schema(self):
         job = sample_job()
         job["story_context"] = {
