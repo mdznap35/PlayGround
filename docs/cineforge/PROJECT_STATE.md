@@ -180,3 +180,12 @@ Authoritative roadmap: [MASTER_ROADMAP_AR.md](./MASTER_ROADMAP_AR.md).
 
 - Snapshot restoration now creates a new monotonically increasing project revision above the current saved head; it does not move the revision counter backwards. Re-importing a project with the same project ID follows the same rule.
 - Renderer compatibility now rejects non-empty subtitle/overlay lanes, duplicate audio lanes, mismatched audio sources or timing, and mismatched music volume. This prevents the v1 renderer adapter from silently discarding unsupported track edits.
+
+
+## Timeline transport and review surface — 2026-11-05
+
+- Added a frame-addressable playhead and sequenced storyboard preview transport (play/pause, start/end, single-frame and one-second stepping).
+- Added direct seeking from the ruler and empty video-lane areas, synchronized active-scene highlighting, a time scrubber, and horizontal zoom for narrow/mobile screens.
+- Added keyboard controls and focus-aware shortcut handling; text-entry controls are excluded so normal editing keystrokes are not intercepted.
+- Added a dependency-free timeline math module with boundary, clamp, progress, frame conversion and ruler interval tests.
+- This is a storyboard/timeline navigation preview, not a rendered video player. It does not enable unsupported trim/split/multi-clip output in renderer v1.
