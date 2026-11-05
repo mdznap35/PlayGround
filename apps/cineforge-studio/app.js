@@ -5,6 +5,7 @@
   const STORAGE_KEY = "cineforge-studio-project-v1";
   const storyPlanImporter = window.CineForgeStoryPlanImporter;
   const narrationFit = window.CineForgeNarrationFit;
+  const captionsEngine = window.CineForgeCaptions;
   const mediaBin = window.CineForgeMediaBin;
   const projectEngine = window.CineForgeProjectEngine;
   const projectStorage = window.CineForgeProjectStorage;
@@ -15,6 +16,7 @@
   if (!projectStorage) throw new Error("CineForge Project Storage failed to load.");
   if (!storyPlanImporter) throw new Error("CineForge Story Plan importer failed to load.");
   if (!narrationFit) throw new Error("CineForge narration-fit analyzer failed to load.");
+  if (!captionsEngine) throw new Error("CineForge captions engine failed to load.");
   let importedStoryPlan = null;
   let projectDocument = null;
   let saveChain = Promise.resolve();
@@ -37,6 +39,8 @@
   ];
 
   let scenes = [];
+  let captions = [];
+  let editingCaptionId = null;
   let selectedScene = 0;
   let saveTimer = null;
   let mediaPreviewUrls = [];
@@ -102,6 +106,8 @@
     $("style").value = style;
     setExactTargetDuration(imported.targetSeconds);
     scenes = imported.scenes;
+    captions = [];
+    editingCaptionId = null;
     importedStoryPlan = imported.storyContext;
     selectedScene = 0;
     updateMusicVolumeLabel();
@@ -121,6 +127,8 @@
       return;
     }
     importedStoryPlan = null;
+    captions = [];
+    editingCaptionId = null;
     const target = brief.target_duration;
     const count = target <= 30 ? 3 : target <= 90 ? 5 : target <= 180 ? 7 : 9;
     const seconds = Math.max(3, Math.round(target / count));
@@ -464,6 +472,7 @@
     const list = $("sceneList");
     list.replaceChildren(...scenes.map(createSceneCard));
     $("sceneCount").textContent = scenes.length + " مشاهد";
+    renderCaptions();
     $("timelineCount").textContent = String(scenes.length).padStart(2, "0");
     renderTimeline();
     renderSceneSelection();
@@ -492,7 +501,7 @@
       voiceover_file:$("voiceoverFile").value.trim(),
       music_file:$("musicFile").value.trim(),
       music_volume:Number($("musicVolume").value)
-    });
+    },{captions});
     const ruler = $("timelineRuler");
     const lanes = $("multiTrackTimeline");
     const stage = $("timelineStage");
@@ -559,6 +568,9 @@
               const to=Number(button.dataset.sceneIndex);
               if (Number.isInteger(from) && Number.isInteger(to) && from!==to) reorderScene(from,to);
             });
+          } else if (track.type==="subtitle") {
+            button.addEventListener("click",()=>editCaption(clip.id));
+            button.setAttribute("aria-label","تعديل الترجمة: "+clip.name);
           } else {
             button.disabled=true;
             button.setAttribute("aria-label",clip.name+" — معاينة مسار");
@@ -587,8 +599,10 @@
 
   function reorderScene(from, to) {
     if (from<0 || to<0 || from>=scenes.length || to>=scenes.length || from===to) return;
+    const oldScenes=scenes.map(scene=>({...scene}));
     const moved=scenes.splice(from,1)[0];
     scenes.splice(to,0,moved);
+    rebaseCaptions(oldScenes,scenes);
     selectedScene=to;
     playheadTime=timelineMath.sceneStart(scenes,to);
     renderAll();
@@ -598,7 +612,9 @@
   function moveScene(index, delta) {
     const next = index + delta;
     if (next < 0 || next >= scenes.length) return;
+    const oldScenes=scenes.map(scene=>({...scene}));
     [scenes[index], scenes[next]] = [scenes[next], scenes[index]];
+    rebaseCaptions(oldScenes,scenes);
     selectedScene = next;
     playheadTime = timelineMath.sceneStart(scenes,next);
     renderAll();
@@ -607,7 +623,9 @@
 
   function deleteScene(index) {
     if (scenes.length <= 1) { alert("يجب أن يحتوي المشروع على مشهد واحد على الأقل."); return; }
+    const removedSceneId=String(scenes[index].id);
     scenes.splice(index, 1);
+    captions=captions.filter(cue=>String(cue.scene_id)!==removedSceneId);
     selectedScene = Math.min(selectedScene, scenes.length - 1);
     playheadTime = timelineMath.sceneStart(scenes,selectedScene);
     renderAll();
@@ -694,7 +712,8 @@
         import_contract: "cineforge.story-plan@2",
         note: "Planning snapshot imported into the renderer workspace. Rendered visuals use the scene fields above."
       } : null,
-      scenes: safeScenes
+      scenes: safeScenes,
+      subtitles: captionsEngine.validate(captions,{duration:total,scenes})
     };
   }
 
@@ -711,6 +730,138 @@
     } catch (error) { alert(error.message); }
   }
 
+
+
+  function rebaseCaptions(oldScenes,newScenes) {
+    const oldRanges=new Map(),newRanges=new Map();
+    let oldCursor=0,newCursor=0;
+    oldScenes.forEach(scene=>{oldRanges.set(String(scene.id),{start:oldCursor,end:oldCursor+Number(scene.seconds)});oldCursor+=Number(scene.seconds);});
+    newScenes.forEach(scene=>{newRanges.set(String(scene.id),{start:newCursor,end:newCursor+Number(scene.seconds)});newCursor+=Number(scene.seconds);});
+    captions=captions.flatMap(cue=>{
+      const before=oldRanges.get(String(cue.scene_id)),after=newRanges.get(String(cue.scene_id));
+      if(!before||!after) return [];
+      const relativeStart=Number(cue.start)-before.start, relativeEnd=Number(cue.end)-before.start;
+      if(relativeStart>=after.end-after.start) return [];
+      const start=after.start+Math.max(0,relativeStart);
+      const end=after.start+Math.min(after.end-after.start,relativeEnd);
+      return end>start ? [{...cue,start,end}] : [];
+    });
+  }
+
+  function captionOptions() {
+    const select=$("captionScene");
+    if(!select) return;
+    const previous=select.value;
+    select.replaceChildren();
+    let cursor=0;
+    scenes.forEach((scene,index)=>{
+      const option=document.createElement("option");
+      option.value=String(scene.id);
+      option.textContent=String(index+1).padStart(2,"0")+" · "+scene.title+" ("+timecode(cursor)+"–"+timecode(cursor+scene.seconds)+")";
+      select.append(option);
+      cursor+=Number(scene.seconds)||0;
+    });
+    if(scenes.some(scene=>String(scene.id)===previous)) select.value=previous;
+    else if(scenes[selectedScene]) select.value=String(scenes[selectedScene].id);
+  }
+
+  function renderCaptions() {
+    const list=$("captionList");
+    if(!list) return;
+    captionOptions();
+    try {
+      captions=captionsEngine.validate(captions,{duration:totalSeconds(),scenes});
+      $("captionStatus").textContent=captions.length+" مقطع ترجمة · "+timecode(totalSeconds())+" مدة المشروع";
+    } catch(error) {
+      $("captionStatus").textContent="تحتاج الترجمة إلى مراجعة: "+error.message;
+    }
+    list.replaceChildren();
+    if(!captions.length){
+      const empty=document.createElement("div");
+      empty.className="caption-empty";
+      empty.textContent="لا توجد ترجمة بعد. أضف مقطعاً أو استورد ملف SRT / VTT.";
+      list.append(empty); return;
+    }
+    captions.forEach(cue=>{
+      const row=document.createElement("article"); row.className="caption-item";
+      const body=document.createElement("div"); body.className="caption-item-body";
+      const stamp=document.createElement("span"); stamp.className="caption-time";
+      stamp.textContent=captionsEngine.timestamp(cue.start,",")+" – "+captionsEngine.timestamp(cue.end,",");
+      const text=document.createElement("p"); text.textContent=cue.text;
+      const scene=scenes.find(item=>String(item.id)===String(cue.scene_id));
+      const linked=document.createElement("small"); linked.textContent=scene?"المشهد: "+scene.title:"مشهد غير معروف";
+      body.append(stamp,text,linked);
+      const actions=document.createElement("div"); actions.className="caption-item-actions";
+      const edit=document.createElement("button"); edit.type="button"; edit.className="media-action"; edit.textContent="تعديل";
+      edit.addEventListener("click",()=>editCaption(cue.id));
+      const remove=document.createElement("button"); remove.type="button"; remove.className="media-delete"; remove.textContent="حذف";
+      remove.addEventListener("click",()=>deleteCaption(cue.id));
+      actions.append(edit,remove); row.append(body,actions); list.append(row);
+    });
+  }
+
+  function resetCaptionForm() {
+    editingCaptionId=null;
+    $("captionText").value="";
+    $("captionSaveButton").textContent="إضافة الترجمة";
+    $("captionCancelButton").hidden=true;
+    captionOptions();
+    const scene=scenes[selectedScene];
+    const start=scene ? timelineMath.sceneStart(scenes,selectedScene) : 0;
+    $("captionScene").value=scene ? String(scene.id) : "";
+    $("captionStart").value=String(start.toFixed(3));
+    $("captionEnd").value=String(Math.min(start+2.5,start+(Number(scene&&scene.seconds)||3)).toFixed(3));
+  }
+
+  function editCaption(id) {
+    const cue=captions.find(item=>String(item.id)===String(id));
+    if(!cue) return;
+    editingCaptionId=cue.id; captionOptions(); $("captionScene").value=cue.scene_id;
+    $("captionStart").value=String(cue.start); $("captionEnd").value=String(cue.end);
+    $("captionText").value=cue.text; $("captionSaveButton").textContent="حفظ تعديل الترجمة";
+    $("captionCancelButton").hidden=false; $("captionText").focus();
+  }
+
+  function saveCaption() {
+    try {
+      const cue={id:editingCaptionId || (window.crypto&&window.crypto.randomUUID ? window.crypto.randomUUID() : "caption-"+Date.now()),
+        scene_id:$("captionScene").value,start:Number($("captionStart").value),end:Number($("captionEnd").value),text:$("captionText").value};
+      captions=captionsEngine.validate(captions.filter(item=>String(item.id)!==String(cue.id)).concat(cue),{duration:totalSeconds(),scenes});
+      resetCaptionForm(); renderCaptions(); renderTimeline(); scheduleSave(); setSavedState("تم حفظ مقطع الترجمة");
+    } catch(error) { alert("تعذّر حفظ الترجمة: "+(error.message||"توقيت أو نص غير صالح.")); }
+  }
+
+  function deleteCaption(id) {
+    captions=captions.filter(cue=>String(cue.id)!==String(id));
+    if(String(editingCaptionId)===String(id)) resetCaptionForm();
+    renderCaptions(); renderTimeline(); scheduleSave(); setSavedState("تم حذف مقطع الترجمة");
+  }
+
+  function exportCaptions(format) {
+    try {
+      const valid=captionsEngine.validate(captions,{duration:totalSeconds(),scenes});
+      if(!valid.length) throw new Error("أضف مقاطع ترجمة أولاً.");
+      const body=format==="vtt"?captionsEngine.exportVtt(valid,{duration:totalSeconds(),scenes}):captionsEngine.exportSrt(valid,{duration:totalSeconds(),scenes});
+      downloadBlob(new Blob([body],{type:format==="vtt"?"text/vtt;charset=utf-8":"application/x-subrip;charset=utf-8"}),
+        "cineforge-captions."+(format==="vtt"?"vtt":"srt"));
+      setSavedState("تم تصدير "+format.toUpperCase());
+    } catch(error) { alert("تعذّر تصدير الترجمة: "+error.message); }
+  }
+
+  async function importCaptionsFile() {
+    const file=$("captionFile").files && $("captionFile").files[0];
+    if(!file) return;
+    try {
+      if(file.size>2*1024*1024) throw new Error("حجم ملف الترجمة أكبر من 2 ميغابايت.");
+      const parsed=/\.vtt$/i.test(file.name)?captionsEngine.parseVtt(await file.text()):captionsEngine.parseSrt(await file.text());
+      const mapped=parsed.map((cue,index)=>({...cue,id:"caption-import-"+Date.now()+"-"+index,
+        scene_id:captionsEngine.sceneAt(scenes,(cue.start+cue.end)/2)}));
+      captions=captionsEngine.validate(captions.concat(mapped),{duration:totalSeconds(),scenes});
+      editingCaptionId=null; renderCaptions(); renderTimeline(); scheduleSave();
+      setSavedState("تم استيراد "+mapped.length+" مقطع ترجمة");
+    } catch(error) { alert("تعذّر استيراد ملف الترجمة: "+error.message); }
+    finally { $("captionFile").value=""; }
+  }
 
   function formatBytes(bytes) {
     if (bytes < 1024) return bytes + " B";
@@ -964,7 +1115,7 @@
   }
 
   function makeProjectDocument() {
-    const state={form:readForm(),scenes,selectedScene,storyPlan:importedStoryPlan};
+    const state={form:readForm(),scenes,selectedScene,storyPlan:importedStoryPlan,captions};
     return projectEngine.createProject(state,projectDocument);
   }
 
@@ -1024,6 +1175,8 @@
     $("musicVolume").value=String(state.form.music_volume ?? 0.18);
     updateMusicVolumeLabel();
     scenes=state.scenes.slice(0,40);
+    captions=Array.isArray(state.captions)?state.captions.slice(0,500):[];
+    editingCaptionId=null;
     importedStoryPlan=state.storyPlan;
     selectedScene=state.selectedScene;
     projectDocument=normalized;
@@ -1067,6 +1220,7 @@
       $("musicVolume").value = String(form.music_volume ?? 0.18);
       updateMusicVolumeLabel();
       scenes = Array.isArray(stored.scenes) ? stored.scenes.slice(0,40) : [];
+      captions = Array.isArray(stored.captions) ? stored.captions.slice(0,500) : [];
       importedStoryPlan = stored.storyPlan && typeof stored.storyPlan === "object" ? stored.storyPlan : null;
       selectedScene = Math.max(0,Math.min(Number(stored.selectedScene)||0,scenes.length-1));
       return scenes.length > 0;
@@ -1081,6 +1235,12 @@
   }
 
   $("generateButton").addEventListener("click", makeOutline);
+  $("captionSaveButton").addEventListener("click", saveCaption);
+  $("captionCancelButton").addEventListener("click", resetCaptionForm);
+  $("captionImportButton").addEventListener("click",()=>$("captionFile").click());
+  $("captionFile").addEventListener("change",importCaptionsFile);
+  $("captionExportSrtButton").addEventListener("click",()=>exportCaptions("srt"));
+  $("captionExportVttButton").addEventListener("click",()=>exportCaptions("vtt"));
   $("importStoryButton").addEventListener("click", () => $("storyPlanFile").click());
   $("importProjectFileButton").addEventListener("click", () => $("projectFile").click());
   $("projectFile").addEventListener("change", async () => {
@@ -1102,7 +1262,8 @@
           form:editor.form,
           scenes:editor.scenes,
           selectedScene:editor.selectedScene,
-          storyPlan:editor.storyPlan
+          storyPlan:editor.storyPlan,
+          captions:editor.captions
         },projectDocument,new Date().toISOString());
       }
       applyProjectDocument(imported);
@@ -1166,6 +1327,7 @@
 
   async function initializeStudio() {
     timelineZoom = Number($("timelineZoom").value) || 100;
+    resetCaptionForm();
     stopTimelinePlayback();
     let loadedFromProjectStore=false;
     try {
@@ -1180,7 +1342,7 @@
     if (!loadedFromProjectStore) {
       if (restoreState()) {
         projectDocument=projectEngine.createProject({
-          form:readForm(),scenes,selectedScene,storyPlan:importedStoryPlan
+          form:readForm(),scenes,selectedScene,storyPlan:importedStoryPlan,captions
         },null);
         scheduleSave();
       } else {
