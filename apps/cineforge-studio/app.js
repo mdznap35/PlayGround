@@ -674,17 +674,7 @@
     if (!brief.idea) throw new Error("أضف الفكرة الأساسية أولاً.");
     if (!scenes.length) throw new Error("أنشئ مخطط المشاهد أولاً.");
     if (scenes.length > 40) throw new Error("الحد الأقصى 40 مشهداً.");
-    const safeScenes = scenes.map((scene, index) => ({
-      title: String(scene.title || "مشهد " + (index+1)).slice(0,100),
-      narration: String(scene.narration || "").slice(0,700),
-      visual: String(scene.visual || "").slice(0,500),
-      narrative_role: String(scene.narrative_role || "story_beat").slice(0,40),
-      purpose: String(scene.purpose || "").slice(0,300),
-      continuity_note: String(scene.continuity_note || "").slice(0,500),
-      image_file: String(scene.image_file || "").trim() || null,
-      camera_move: scene.camera_move || "push_in",
-      seconds: Math.max(3, Math.min(90, Number(scene.seconds) || 3))
-    }));
+    const safeScenes = projectEngine.toRendererScenes(scenes);
     const total = safeScenes.reduce((sum, scene) => sum + scene.seconds, 0);
     if (total > 900) throw new Error("مدة المشروع تتجاوز 15 دقيقة، قسّمه إلى جزأين.");
     return {
