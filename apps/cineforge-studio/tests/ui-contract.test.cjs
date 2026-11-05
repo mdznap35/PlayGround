@@ -16,8 +16,8 @@ test("the caption engine is loaded before the editor application", () => {
 });
 
 test("every literal DOM id used by app.js exists in the page", () => {
-  const present = new Set([...html.matchAll(/\\bid="([^"]+)"/g)].map(match => match[1]));
-  const referenced = new Set([...app.matchAll(/\\$\\("([^"]+)"\\)/g)].map(match => match[1]));
+  const present = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]));
+  const referenced = new Set([...app.matchAll(/\$\("([^"]+)"\)/g)].map(match => match[1]));
   const missing = [...referenced].filter(id => !present.has(id)).sort();
   assert.deepEqual(missing, [], "app.js references missing page elements");
   assert.ok(referenced.size >= 60, "the contract scan unexpectedly found too few app selectors");
