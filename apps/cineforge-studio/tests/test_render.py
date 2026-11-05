@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from render import validate_job, resolve_media_path, camera_filter, draw_scene, subtitles_srt, render
+from qa_report import run_content_analysis
 from PIL import Image, ImageChops
 
 def sample_job():
@@ -222,6 +223,11 @@ class JobValidationTests(unittest.TestCase):
             self.assertEqual(video["r_frame_rate"], "24/1")
             self.assertEqual(audio["codec_name"], "aac")
             self.assertAlmostEqual(float(metadata["format"]["duration"]), 3.0, delta=0.8)
+
+            content_qa = run_content_analysis(output, include_audio=True)
+            self.assertEqual(content_qa["status"], "completed")
+            self.assertTrue(content_qa["audio_analyzed"])
+            self.assertIn("silence_segments_seconds", content_qa)
 
             # Render the same project without subtitles and compare the subtitle-safe
             # center band. This proves the subtitle filter changed visible frame pixels,
