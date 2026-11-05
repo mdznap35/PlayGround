@@ -1,9 +1,10 @@
 import json, shutil, subprocess, sys, tempfile, unittest
+from io import BytesIO
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 from render import validate_job, resolve_media_path, camera_filter, draw_scene, subtitles_srt, render
-from PIL import Image
+from PIL import Image, ImageChops
 
 def sample_job():
     return {"schema_version":1,"title":"Test film","aspect":"16:9","style":"cinematic","fps":24,
@@ -221,6 +222,37 @@ class JobValidationTests(unittest.TestCase):
             self.assertEqual(video["r_frame_rate"], "24/1")
             self.assertEqual(audio["codec_name"], "aac")
             self.assertAlmostEqual(float(metadata["format"]["duration"]), 3.0, delta=0.8)
+
+            # Render the same project without subtitles and compare the subtitle-safe
+            # center band. This proves the subtitle filter changed visible frame pixels,
+            # rather than merely allowing FFmpeg to produce an MP4 container.
+            baseline_job = dict(job)
+            baseline_job.pop("subtitles")
+            baseline_job_path = root / "baseline.json"
+            baseline_job_path.write_text(json.dumps(baseline_job), encoding="utf-8")
+            baseline_output = root / "baseline.mp4"
+            render(baseline_job_path, baseline_output)
+
+            def frame_at(path, seconds):
+                extracted = subprocess.run([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error",
+                    "-ss", str(seconds), "-i", str(path),
+                    "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "-"
+                ], check=True, capture_output=True)
+                with Image.open(BytesIO(extracted.stdout)) as image:
+                    return image.convert("RGB")
+
+            subtitled_frame = frame_at(output, 1.5)
+            baseline_frame = frame_at(baseline_output, 1.5)
+            self.assertEqual(subtitled_frame.size, (1920, 1080))
+            self.assertEqual(baseline_frame.size, subtitled_frame.size)
+            difference = ImageChops.difference(subtitled_frame, baseline_frame).convert("L")
+            subtitle_band = difference.crop((480, 820, 1440, 1035))
+            strong_changed_pixels = sum(subtitle_band.histogram()[61:])
+            self.assertGreater(
+                strong_changed_pixels, 100,
+                "burned subtitle cue did not produce visible pixel changes in its expected band"
+            )
 
     def test_media_resolution_rejects_symlink_escape(self):
         with tempfile.TemporaryDirectory() as folder, tempfile.TemporaryDirectory() as outside:
