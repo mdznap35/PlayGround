@@ -2,7 +2,7 @@ import json, shutil, subprocess, sys, tempfile, unittest
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
-from render import validate_job, resolve_media_path, camera_filter, draw_scene, render
+from render import validate_job, resolve_media_path, camera_filter, draw_scene, subtitles_srt, render
 from PIL import Image
 
 def sample_job():
@@ -17,6 +17,16 @@ class JobValidationTests(unittest.TestCase):
         self.assertEqual(len(result["scenes"]),2)
         self.assertEqual(result["scenes"][0]["camera_move"],"push_in")
         self.assertEqual(sum(s["seconds"] for s in result["scenes"]),11)
+    def test_srt_export_preserves_arabic_and_real_line_breaks(self):
+        body = subtitles_srt([{
+            "start": 0.5, "end": 2.0, "text": "مرحباً بالعالم"
+        }])
+        self.assertEqual(
+            body,
+            "1\\n00:00:00,500 --> 00:00:02,000\\nمرحباً بالعالم\\n"
+        )
+        self.assertNotIn(r"\\n", body)
+
     def test_rejects_missing_scene_list(self):
         with self.assertRaisesRegex(ValueError,"between 1 and"):
             validate_job({"schema_version":1,"title":"Missing","scenes":[]})
@@ -178,12 +188,20 @@ class JobValidationTests(unittest.TestCase):
                 "music_file": "audio/music.wav",
                 "music_volume": 0.12,
                 "scenes": [{
+                    "id": "shot-1",
                     "title": "A blue horizon",
                     "narration": "A short test narration.",
                     "visual": "A still image with a slow camera move.",
                     "image_file": "assets/shot.png",
                     "camera_move": "pan_left",
                     "seconds": 3
+                }],
+                "subtitles": [{
+                    "id": "subtitle-1",
+                    "scene_id": "shot-1",
+                    "start": 0.5,
+                    "end": 2.5,
+                    "text": "مرحباً بالعالم"
                 }]
             }
             job_path = root / "integration.json"
