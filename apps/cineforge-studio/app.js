@@ -8,6 +8,8 @@
   const mediaBin = window.CineForgeMediaBin;
   const projectEngine = window.CineForgeProjectEngine;
   const projectStorage = window.CineForgeProjectStorage;
+  const timelineMath = window.CineForgeTimelineMath;
+  if (!timelineMath) throw new Error("CineForge Timeline Math failed to load.");
   if (!mediaBin) throw new Error("CineForge Media Bin failed to load.");
   if (!projectEngine) throw new Error("CineForge Project Engine failed to load.");
   if (!projectStorage) throw new Error("CineForge Project Storage failed to load.");
@@ -36,6 +38,12 @@
   let selectedScene = 0;
   let saveTimer = null;
   let mediaPreviewUrls = [];
+  let playheadTime = 0;
+  let timelineZoom = 100;
+  let isTimelinePlaying = false;
+  let playbackFrame = 0;
+  let playbackLastTime = null;
+  const TIMELINE_FPS = 24;
 
   const defaultProject = () => ({
     version: 1,
@@ -141,6 +149,125 @@
   function timecode(seconds) {
     const s = Math.max(0, Math.round(seconds));
     return String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+  }
+
+  function frameTimecode(seconds) {
+    const frame = Math.max(0, Math.floor(Number(seconds) * TIMELINE_FPS + 0.000001));
+    return timecode(Math.floor(frame / TIMELINE_FPS)) + ":" + String(frame % TIMELINE_FPS).padStart(2, "0");
+  }
+
+  function stopTimelinePlayback() {
+    isTimelinePlaying = false;
+    playbackLastTime = null;
+    if (playbackFrame) cancelAnimationFrame(playbackFrame);
+    playbackFrame = 0;
+    const button = $("timelinePlayButton");
+    if (button) {
+      button.textContent = "▶ تشغيل";
+      button.setAttribute("aria-label", "تشغيل المعاينة");
+      button.setAttribute("aria-pressed", "false");
+    }
+  }
+
+  function syncTimelinePlayhead() {
+    const total = totalSeconds();
+    playheadTime = timelineMath.clampTime(playheadTime, total);
+    const stage = $("timelineStage");
+    if (stage) {
+      stage.style.setProperty("--timeline-playhead", (timelineMath.progress(playheadTime, total) * 100) + "%");
+      stage.style.width = timelineZoom + "%";
+    }
+    const scrubber = $("timelineScrubber");
+    if (scrubber) {
+      scrubber.max = String(Math.max(1, Math.round(total * TIMELINE_FPS)));
+      scrubber.value = String(Math.round(playheadTime * TIMELINE_FPS));
+    }
+    if ($("timelineCurrentTime")) $("timelineCurrentTime").textContent = frameTimecode(playheadTime);
+    if ($("timelineTotalTime")) $("timelineTotalTime").textContent = frameTimecode(total);
+    if ($("timelineZoomValue")) $("timelineZoomValue").textContent = timelineZoom + "%";
+    if ($("previewTime")) $("previewTime").textContent = timecode(playheadTime);
+    document.querySelectorAll(".timeline-clip[data-scene-index]").forEach(button => {
+      button.classList.toggle("is-active", Number(button.dataset.sceneIndex) === selectedScene);
+    });
+  }
+
+  function seekTimeline(seconds, fromPlayback) {
+    if (!fromPlayback) stopTimelinePlayback();
+    playheadTime = timelineMath.clampTime(seconds, totalSeconds());
+    const nextScene = timelineMath.sceneIndexAt(scenes, playheadTime);
+    const changedScene = nextScene >= 0 && nextScene !== selectedScene;
+    if (nextScene >= 0) selectedScene = nextScene;
+    syncTimelinePlayhead();
+    if (changedScene) renderSceneSelection();
+  }
+
+  function selectTimelineScene(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= scenes.length) return;
+    stopTimelinePlayback();
+    selectedScene = index;
+    playheadTime = timelineMath.sceneStart(scenes, index);
+    renderSceneSelection();
+    renderTimeline();
+    scheduleSave();
+  }
+
+  function timelinePlaybackTick(now) {
+    if (!isTimelinePlaying) return;
+    if (playbackLastTime == null) playbackLastTime = now;
+    const elapsed = Math.max(0, (now - playbackLastTime) / 1000);
+    playbackLastTime = now;
+    const next = Math.min(totalSeconds(), playheadTime + elapsed);
+    seekTimeline(next, true);
+    if (next >= totalSeconds()) {
+      stopTimelinePlayback();
+      return;
+    }
+    playbackFrame = requestAnimationFrame(timelinePlaybackTick);
+  }
+
+  function startTimelinePlayback() {
+    if (isTimelinePlaying || !scenes.length) return;
+    if (playheadTime >= totalSeconds()) seekTimeline(0, true);
+    isTimelinePlaying = true;
+    playbackLastTime = null;
+    const button = $("timelinePlayButton");
+    button.textContent = "Ⅱ إيقاف مؤقت";
+    button.setAttribute("aria-label", "إيقاف المعاينة مؤقتاً");
+    button.setAttribute("aria-pressed", "true");
+    playbackFrame = requestAnimationFrame(timelinePlaybackTick);
+  }
+
+  function toggleTimelinePlayback() {
+    if (isTimelinePlaying) stopTimelinePlayback();
+    else startTimelinePlayback();
+  }
+
+  function stepTimelineFrames(frameDelta) {
+    const currentFrame = Math.round(playheadTime * TIMELINE_FPS);
+    seekTimeline(timelineMath.secondsFromFrame(currentFrame + frameDelta, TIMELINE_FPS));
+  }
+
+  function handleTimelineKeyboard(event) {
+    const target = event.target;
+    const tag = target && target.tagName ? target.tagName.toLowerCase() : "";
+    const editing = ["input", "textarea", "select"].includes(tag) || (target && target.isContentEditable);
+    if (editing || event.altKey || event.ctrlKey || event.metaKey) return;
+    if (event.code === "Space") {
+      event.preventDefault();
+      toggleTimelinePlayback();
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      stepTimelineFrames(event.shiftKey ? -TIMELINE_FPS : -1);
+    } else if (event.key === "ArrowRight") {
+      event.preventDefault();
+      stepTimelineFrames(event.shiftKey ? TIMELINE_FPS : 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      seekTimeline(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      seekTimeline(totalSeconds());
+    }
   }
 
   function updateNarrationFitBadge(badge, scene) {
@@ -270,7 +397,7 @@
     right.className = "scene-side";
     right.append(duration, tools);
     card.append(number, content, right);
-    card.addEventListener("click", () => { selectedScene = index; renderSceneSelection(); scheduleSave(); });
+    card.addEventListener("click", () => selectTimelineScene(index));
     return card;
   }
 
@@ -309,9 +436,11 @@
     });
     const ruler = $("timelineRuler");
     const lanes = $("multiTrackTimeline");
-    if (!ruler || !lanes) return;
+    const stage = $("timelineStage");
+    if (!ruler || !lanes || !stage) return;
+    stage.style.width = timelineZoom + "%";
     ruler.replaceChildren();
-    const step = total <= 60 ? 10 : total <= 180 ? 30 : 60;
+    const step = timelineMath.tickStep(total);
     for (let second=0;second<=total;second+=step) {
       const tick=document.createElement("span");
       tick.className="timeline-ruler-tick";
@@ -356,7 +485,7 @@
             button.dataset.sceneIndex=String(sceneIndex);
             button.draggable=true;
             button.addEventListener("click",()=>{
-              if (sceneIndex>=0) { selectedScene=sceneIndex; renderSceneSelection(); scheduleSave(); }
+              if (sceneIndex>=0) selectTimelineScene(sceneIndex);
             });
             button.addEventListener("dragstart",event=>{
               if (sceneIndex<0) return;
@@ -379,6 +508,11 @@
         });
       }
       if (track.type==="video") {
+        body.addEventListener("click", event => {
+          if (event.target !== body) return;
+          const bounds = body.getBoundingClientRect();
+          if (bounds.width > 0) seekTimeline(((event.clientX - bounds.left) / bounds.width) * total);
+        });
         body.addEventListener("dragover",event=>event.preventDefault());
         body.addEventListener("drop",event=>{
           event.preventDefault();
@@ -389,6 +523,7 @@
       row.append(heading,body);
       lanes.append(row);
     });
+    seekTimeline(playheadTime, true);
   }
 
   function reorderScene(from, to) {
@@ -396,6 +531,7 @@
     const moved=scenes.splice(from,1)[0];
     scenes.splice(to,0,moved);
     selectedScene=to;
+    playheadTime=timelineMath.sceneStart(scenes,to);
     renderAll();
     scheduleSave();
   }
@@ -405,6 +541,7 @@
     if (next < 0 || next >= scenes.length) return;
     [scenes[index], scenes[next]] = [scenes[next], scenes[index]];
     selectedScene = next;
+    playheadTime = timelineMath.sceneStart(scenes,next);
     renderAll();
     scheduleSave();
   }
@@ -413,6 +550,7 @@
     if (scenes.length <= 1) { alert("يجب أن يحتوي المشروع على مشهد واحد على الأقل."); return; }
     scenes.splice(index, 1);
     selectedScene = Math.min(selectedScene, scenes.length - 1);
+    playheadTime = timelineMath.sceneStart(scenes,selectedScene);
     renderAll();
     scheduleSave();
   }
@@ -420,6 +558,7 @@
   function addScene() {
     scenes.push({id: Date.now(), title:"مشهد جديد", narration:"اكتب الرسالة التي تريد إيصالها في هذا المشهد.", visual:"حدد العنصر الرئيسي والحركة والإضاءة والإحساس البصري.", image_file:"", camera_move:"push_in", seconds:10});
     selectedScene = scenes.length - 1;
+    playheadTime = timelineMath.sceneStart(scenes,selectedScene);
     renderAll();
     scheduleSave();
   }
@@ -428,7 +567,7 @@
     const scene = scenes[selectedScene];
     if (!scene) return;
     $("previewMeta").textContent = "SCENE " + String(selectedScene + 1).padStart(2,"0") + " / " + String(scenes.length).padStart(2,"0");
-    $("previewTime").textContent = timecode(scene.seconds);
+    $("previewTime").textContent = timecode(playheadTime);
     $("previewTitle").textContent = scene.title;
     $("previewAsset").textContent = scene.image_file
       ? "ASSET: jobs/" + scene.image_file + " · " + scene.camera_move
@@ -836,6 +975,8 @@
     importedStoryPlan=state.storyPlan;
     selectedScene=state.selectedScene;
     projectDocument=normalized;
+    playheadTime=0;
+    stopTimelinePlayback();
   }
 
   function scheduleSave() {
@@ -936,6 +1077,23 @@
     }
   });
   $("addSceneButton").addEventListener("click", addScene);
+  $("timelinePlayButton").addEventListener("click", toggleTimelinePlayback);
+  $("timelineStartButton").addEventListener("click", () => seekTimeline(0));
+  $("timelineEndButton").addEventListener("click", () => seekTimeline(totalSeconds()));
+  $("timelineFrameBackButton").addEventListener("click", () => stepTimelineFrames(-1));
+  $("timelineFrameForwardButton").addEventListener("click", () => stepTimelineFrames(1));
+  $("timelineScrubber").addEventListener("input", event => {
+    seekTimeline(timelineMath.secondsFromFrame(Number(event.target.value), TIMELINE_FPS));
+  });
+  $("timelineZoom").addEventListener("input", event => {
+    timelineZoom = Math.max(100, Math.min(250, Number(event.target.value) || 100));
+    syncTimelinePlayhead();
+  });
+  $("timelineRuler").addEventListener("click", event => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    if (bounds.width > 0) seekTimeline(((event.clientX - bounds.left) / bounds.width) * totalSeconds());
+  });
+  document.addEventListener("keydown", handleTimelineKeyboard);
   $("downloadButton").addEventListener("click", downloadJob);
   $("downloadProjectFileButton").addEventListener("click", downloadFullProject);
   $("restorePreviousVersionButton").addEventListener("click", restorePreviousVersion);
@@ -952,6 +1110,8 @@
   });
 
   async function initializeStudio() {
+    timelineZoom = Number($("timelineZoom").value) || 100;
+    stopTimelinePlayback();
     let loadedFromProjectStore=false;
     try {
       const stored=await projectStorage.loadLatest();
