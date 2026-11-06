@@ -183,6 +183,32 @@
     await transactionDone(transaction);
   }
 
+  function auditRights(records) {
+    if (!Array.isArray(records)) throw new TypeError("سجلات الأصول يجب أن تكون قائمة.");
+    const issues = [];
+    const unspecified = new Set(["", "غير محدد", "غير معروف", "unknown", "n/a", "na", "none"]);
+    for (const asset of records) {
+      if (!asset || typeof asset !== "object") {
+        issues.push({asset_id:null,name:"ملف غير معروف",code:"invalid_record",message:"سجل الأصل غير صالح."});
+        continue;
+      }
+      const name = cleanText(asset.name, 180, "ملف بلا اسم");
+      const sourceType = SOURCE_TYPES.has(asset.source_type) ? asset.source_type : "unknown";
+      if (sourceType === "unknown") {
+        issues.push({asset_id:asset.id || null,name,code:"unknown_source",message:"مصدر الأصل غير موثق."});
+      }
+      const license = cleanText(asset.license, 180, "").toLowerCase();
+      if (unspecified.has(license)) {
+        issues.push({asset_id:asset.id || null,name,code:"license_unspecified",message:"الترخيص أو الإذن غير محدد."});
+      }
+      if (["generated", "open_license", "licensed"].includes(sourceType) &&
+          !cleanText(asset.source_ref, 500, "")) {
+        issues.push({asset_id:asset.id || null,name,code:"source_reference_missing",message:"يلزم تسجيل المزود أو رابط المصدر أو مرجع الإذن."});
+      }
+    }
+    return {ok:issues.length === 0,checked_assets:records.length,issue_count:issues.length,issues};
+  }
+
   const crcTable = (() => {
     const table = new Uint32Array(256);
     for (let n = 0; n < 256; n++) {
@@ -278,6 +304,6 @@
   return {
     MAX_FILE_BYTES, MAX_LIBRARY_BYTES, MAX_ARCHIVE_BYTES, MAX_ASSETS,
     inferKind, projectPath, validateArchivePath, crc32, buildZip,
-    usage, list, get, add, remove
+    usage, list, get, add, remove, auditRights
   };
 });
