@@ -1037,48 +1037,118 @@
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
 
+  async function runExportPreflight() {
+    const panel = $("preflightReport");
+    panel.replaceChildren();
+    const addLine = (kind, message) => {
+      const item = document.createElement("li");
+      item.className = "preflight-item preflight-" + kind;
+      item.textContent = message;
+      panel.append(item);
+    };
+
+    let job;
+    try {
+      job = buildJob();
+    } catch (error) {
+      panel.dataset.state = "blocked";
+      addLine("error", "لا يمكن فحص المشروع: " + (error.message || "بيانات المشروع غير مكتملة."));
+      $("preflightSummary").textContent = "الفحص متوقف";
+      return;
+    }
+
+    try {
+      const currentProject = makeProjectDocument();
+      const compatibility = projectEngine.rendererCompatibility(currentProject);
+      const records = await mediaBin.list();
+      const packageAudit = mediaBin.auditPackageAssets(job, records);
+      const blocking = [];
+      const warnings = [];
+
+      if (!compatibility.ok) blocking.push(...compatibility.errors);
+      if (packageAudit.missing_paths.length) {
+        blocking.push("ملفات مستخدمة غير موجودة في مكتبة الوسائط: " + packageAudit.missing_paths.join("، "));
+      }
+      if (packageAudit.duplicate_paths.length) {
+        blocking.push("توجد مسارات أصول مكررة داخل المكتبة: " + packageAudit.duplicate_paths.join("، "));
+      }
+      if (packageAudit.rights_audit.issue_count) {
+        warnings.push("توجد " + packageAudit.rights_audit.issue_count +
+          " ملاحظات حقوق في " + packageAudit.rights_audit.checked_assets + " أصل مستخدم.");
+      }
+      if (!packageAudit.referenced_paths.length) {
+        warnings.push("لا توجد صور أو ملفات صوت مرتبطة من مكتبة الوسائط؛ سيعتمد الناتج على تصميمات Motion Graphics والنصوص.");
+      }
+      if (packageAudit.unreferenced_assets.length) {
+        warnings.push(packageAudit.unreferenced_assets.length +
+          " ملفاً في المكتبة غير مرتبط بالمشروع، ولن يدخل حزمة المشروع افتراضياً.");
+      }
+      if (packageAudit.invalid_records.length) {
+        warnings.push(packageAudit.invalid_records.length +
+          " سجل وسائط غير صالح في المكتبة؛ لن يؤثر في الحزمة الافتراضية ما لم يكن مطلوباً.");
+      }
+
+      panel.dataset.state = blocking.length ? "blocked" : warnings.length ? "warning" : "ready";
+      $("preflightSummary").textContent = blocking.length
+        ? "يحتاج معالجة"
+        : warnings.length ? "جاهز مع تنبيهات" : "اجتاز الفحص الأولي";
+      addLine(blocking.length ? "error" : "success",
+        blocking.length ? "تعذّر اعتماد التوافق الكامل للرندر." : "بنية المشروع ومدد المشاهد والترجمة اجتازت الفحص الأولي.");
+      addLine("info", job.scenes.length + " مشهد · " + timecode(job.scenes.reduce((sum, scene) => sum + scene.seconds, 0)) +
+        " · " + job.aspect + " · " + packageAudit.assets.length + " أصل مرتبط.");
+      blocking.forEach(message => addLine("error", message));
+      warnings.forEach(message => addLine("warning", message));
+      if (!blocking.length && !warnings.length) {
+        addLine("success", "لا توجد ملاحظات معروفة في هذا الفحص.");
+      }
+      setSavedState(blocking.length ? "فحص التصدير: يحتاج معالجة" : "اكتمل فحص التصدير الأولي");
+    } catch (error) {
+      panel.dataset.state = "blocked";
+      $("preflightSummary").textContent = "تعذّر إكمال الفحص";
+      addLine("error", error.message || "حدث خطأ غير متوقع أثناء فحص المشروع.");
+    }
+  }
+
   async function downloadProjectPackage() {
     try {
       const records = await mediaBin.list();
       const job = buildJob();
-      const paths = new Map(records.map(item => [mediaBin.projectPath(item), item]));
-      const referencedPaths = [
-        ...job.scenes.map(scene => scene.image_file).filter(Boolean),
-        job.voiceover_file,
-        job.music_file
-      ].filter(Boolean);
-      const missing = [...new Set(referencedPaths.filter(path => !paths.has(path)))];
-      if (missing.length) {
-        throw new Error("الحزمة لن تكون مكتملة. أضف هذه الملفات إلى مكتبة الوسائط ثم أعد ربطها:\n" + missing.slice(0,8).join("\n"));
+      const packageAudit = mediaBin.auditPackageAssets(job, records);
+      if (packageAudit.missing_paths.length) {
+        throw new Error("الحزمة لن تكون مكتملة. أضف هذه الملفات إلى مكتبة الوسائط ثم أعد ربطها:\\n" +
+          packageAudit.missing_paths.slice(0,8).join("\\n"));
       }
-      const rightsAudit = mediaBin.auditRights(records);
+      if (packageAudit.duplicate_paths.length) {
+        throw new Error("توجد مسارات مكررة في مكتبة الوسائط: " + packageAudit.duplicate_paths.join("، "));
+      }
+
+      const includeUnused = $("includeUnusedMedia").checked;
+      if (includeUnused && packageAudit.invalid_records.length) {
+        throw new Error("لا يمكن تضمين كامل المكتبة قبل إصلاح السجلات غير الصالحة: " +
+          packageAudit.invalid_records.slice(0,5).map(item => item.name).join("، "));
+      }
+      const packageRecords = includeUnused ? records : packageAudit.assets;
+      const rightsAudit = mediaBin.auditRights(packageRecords);
       if (!rightsAudit.ok) {
         const details = rightsAudit.issues.slice(0,10)
-          .map(issue => "• " + issue.name + ": " + issue.message).join("\n");
+          .map(issue => "• " + issue.name + ": " + issue.message).join("\\n");
         const remaining = rightsAudit.issue_count > 10
-          ? "\nو" + (rightsAudit.issue_count - 10) + " ملاحظات أخرى." : "";
+          ? "\\nو" + (rightsAudit.issue_count - 10) + " ملاحظات أخرى." : "";
         const warning = "تنبيه الحقوق: توجد " + rightsAudit.issue_count +
-          " ملاحظات في " + rightsAudit.checked_assets + " أصل مضمّن.\n\n" +
+          " ملاحظات في " + rightsAudit.checked_assets + " أصل ستُضاف إلى الحزمة.\\n\\n" +
           details + remaining +
-          "\n\nيمكنك متابعة إنشاء النسخة الاحتياطية، لكن لا تنشر أو تستخدم الأصول ذات الحقوق غير المتحققة قبل مراجعتها. هل تريد المتابعة؟";
+          "\\n\\nيمكنك متابعة إنشاء النسخة الاحتياطية، لكن لا تنشر أو تستخدم الأصول ذات الحقوق غير المتحققة قبل مراجعتها. هل تريد المتابعة؟";
         if (!confirm(warning)) return;
       }
       const slug = (job.title || "cineforge").normalize("NFKC")
-        .replace(/[^\p{L}\p{N}-]+/gu,"-").replace(/^-|-$/g,"").slice(0,48) || "cineforge";
-      const manifestAssets = records.map(item => ({
+        .replace(/[^\\p{L}\\p{N}-]+/gu,"-").replace(/^-|-$/g,"").slice(0,48) || "cineforge";
+      const manifestAssets = packageRecords.map(item => ({
         id:item.id, name:item.name, kind:item.kind, mime:item.mime, size:item.size,
         sha256:item.sha256, source_type:item.source_type, source_ref:item.source_ref,
         license:item.license, notes:item.notes, created_at:item.created_at,
         project_path:mediaBin.projectPath(item)
       }));
-      job.project_manifest = {
-        schema:"cineforge.project",
-        schema_version:2,
-        created_at:new Date().toISOString(),
-        renderer_job_schema_version:1,
-        asset_count:manifestAssets.length
-      };
-      job.media_manifest = manifestAssets;
+      const assetScope = includeUnused ? "full-library" : "project-referenced";
       const projectFilePath = "apps/cineforge-studio/projects/" + slug + ".cineforge.json";
       const fullProject = makeProjectDocument();
       job.project_manifest = {
@@ -1089,33 +1159,39 @@
         project_revision:fullProject.revision,
         timeline_schema_version:1,
         renderer_job_schema_version:1,
-        asset_count:manifestAssets.length
+        asset_count:manifestAssets.length,
+        asset_scope:assetScope
       };
+      job.media_manifest = manifestAssets;
+      job.media_manifest_scope = assetScope;
       const jobRoot = "apps/cineforge-studio/jobs/";
       const entries = [
-        {name:jobRoot + slug + ".json",data:JSON.stringify(job,null,2) + "\n"},
-        {name:projectFilePath,data:JSON.stringify(fullProject,null,2) + "\n"},
+        {name:jobRoot + slug + ".json",data:JSON.stringify(job,null,2) + "\\n"},
+        {name:projectFilePath,data:JSON.stringify(fullProject,null,2) + "\\n"},
         {name:"apps/cineforge-studio/media-manifests/media-manifest-" + slug + ".json",data:JSON.stringify({
-          schema:"cineforge.media-manifest",schema_version:1,project_title:job.title,assets:manifestAssets
-        },null,2) + "\n"},
+          schema:"cineforge.media-manifest",schema_version:1,project_title:job.title,
+          asset_scope:assetScope,assets:manifestAssets
+        },null,2) + "\\n"},
         {name:"CINEFORGE-PACKAGE-README.txt",data:
-          "CineForge project package\n\n" +
-          "Extract this ZIP at the repository root and preserve the folder structure.\n" +
-          "The render job is under apps/cineforge-studio/jobs/.\n" +
-          "Media paths in the job are relative to that jobs/ folder.\n" +
-          "Commit the JSON and its assets/audio files together before running the CineForge workflow.\n" +
-          "This package contains local media copies and their provenance metadata.\n"}
+          "CineForge project package\\n\\n" +
+          "Extract this ZIP at the repository root and preserve the folder structure.\\n" +
+          "The render job is under apps/cineforge-studio/jobs/.\\n" +
+          "Media paths in the job are relative to that jobs/ folder.\\n" +
+          "Packaged media scope: " + assetScope + ".\\n" +
+          "By default only media referenced by this project is included.\\n" +
+          "Commit the JSON and its required assets/audio files together before running the CineForge workflow.\\n" +
+          "This package contains local media copies and their provenance metadata.\\n"}
       ];
-      for (const item of records) {
+      for (const item of packageRecords) {
         const stored = await mediaBin.get(item.id);
         if (!stored || !stored.blob) throw new Error("الملف مفقود من التخزين المحلي: " + item.name);
         entries.push({name:jobRoot + mediaBin.projectPath(item),data:stored.blob});
       }
       const zip = await mediaBin.buildZip(entries);
       downloadBlob(zip,"cineforge-" + slug + "-project.zip");
-      setSavedState("تم إنشاء حزمة المشروع");
+      setSavedState("تم إنشاء حزمة المشروع · " + packageRecords.length + " أصل");
     } catch (error) {
-      alert("تعذّر إنشاء حزمة المشروع:\n" + (error.message || "خطأ غير معروف"));
+      alert("تعذّر إنشاء حزمة المشروع:\\n" + (error.message || "خطأ غير معروف"));
     }
   }
 
@@ -1322,6 +1398,7 @@
     if (document.hidden) stopTimelinePlayback();
   });
   $("downloadButton").addEventListener("click", downloadJob);
+  $("preflightButton").addEventListener("click", runExportPreflight);
   $("downloadProjectFileButton").addEventListener("click", downloadFullProject);
   $("restorePreviousVersionButton").addEventListener("click", restorePreviousVersion);
   $("downloadPackageButton").addEventListener("click", downloadProjectPackage);
