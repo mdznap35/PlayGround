@@ -111,6 +111,19 @@ test("package audit reports missing referenced files and invalid library records
   assert.equal(report.invalid_records[0].asset_id,invalid.id);
 });
 
+test("unreferenced duplicate paths do not block scoped packages but remain visible for full-library exports", () => {
+  const used = {id:"used0001",name:"scene.png",kind:"image",source_type:"user"};
+  const duplicateA = {id:"abcdefgh-a",name:"unused.png",kind:"image",source_type:"user"};
+  const duplicateB = {id:"abcdefgh-b",name:"unused.png",kind:"image",source_type:"user"};
+  const job = {aspect:"16:9",scenes:[{image_file:media.projectPath(used)}]};
+  const report = media.auditPackageAssets(job,[used,duplicateA,duplicateB]);
+
+  assert.equal(report.ok,true,"unreferenced duplicate paths must not block the default project-scoped package");
+  assert.deepEqual(report.assets.map(item=>item.id),[used.id]);
+  assert.deepEqual(report.duplicate_paths,[]);
+  assert.deepEqual(report.all_duplicate_paths,[media.projectPath(duplicateA)]);
+});
+
 test("user-created assets do not require an external license field", () => {
   const report = media.auditRights([
     {id:"owned",name:"own.png",source_type:"user",license:"غير محدد"}
