@@ -1095,7 +1095,7 @@
         warnings.push(packageAudit.aspect_mismatches.length +
           " صورة تختلف نسبتها عن أبعاد الفيديو المختارة بأكثر من 8%؛ راجع القص والملاءمة قبل الإنتاج.");
       }
-      const unreadableMetadata = packageAudit.assets.filter(item => item.metadata_status === "unavailable").length;
+      const unreadableMetadata = packageAudit.assets.filter(item => item.metadata_status !== "available").length;
       if (unreadableMetadata) {
         warnings.push(unreadableMetadata + " أصل مستخدم لم يتمكن المتصفح من قراءة بياناته الفنية.");
       }
