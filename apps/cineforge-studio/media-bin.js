@@ -295,12 +295,17 @@
     }
     if (!Array.isArray(records)) throw new TypeError("سجلات مكتبة الوسائط غير صالحة.");
 
-    const referencedPaths = [
-      ...job.scenes.map(scene => scene && scene.image_file),
-      job.voiceover_file,
-      job.music_file
-    ].filter(value => typeof value === "string" && value.trim()).map(value => value.trim());
-    const uniquePaths = [...new Set(referencedPaths)];
+    const expectedKindsByPath = new Map();
+    const addReference = (value, expectedKind) => {
+      if (typeof value !== "string" || !value.trim()) return;
+      const path = value.trim();
+      if (!expectedKindsByPath.has(path)) expectedKindsByPath.set(path, new Set());
+      expectedKindsByPath.get(path).add(expectedKind);
+    };
+    job.scenes.forEach(scene => addReference(scene && scene.image_file, "image"));
+    addReference(job.voiceover_file, "audio");
+    addReference(job.music_file, "audio");
+    const uniquePaths = [...expectedKindsByPath.keys()];
     const byPath = new Map();
     const invalidRecords = [];
     const duplicatePaths = [];
@@ -321,6 +326,16 @@
 
     const assets = uniquePaths.map(path => byPath.get(path)).filter(Boolean);
     const missingPaths = uniquePaths.filter(path => !byPath.has(path));
+    const typeMismatches = assets.filter(asset => {
+      const path = projectPath(asset);
+      const expectedKinds = expectedKindsByPath.get(path);
+      return !expectedKinds || !expectedKinds.has(asset.kind);
+    }).map(asset => ({
+      asset_id:asset.id,
+      name:asset.name,
+      actual_kind:asset.kind,
+      expected_kinds:[...(expectedKindsByPath.get(projectPath(asset)) || [])]
+    }));
     const usedIds = new Set(assets.map(asset => asset.id));
     const unreferencedAssets = records.filter(asset => !usedIds.has(asset && asset.id));
     const expectedAspect = {"16:9":16/9,"9:16":9/16,"1:1":1}[job.aspect || "16:9"];
@@ -337,11 +352,12 @@
     const rightsAudit = auditRights(assets);
 
     return {
-      ok:missingPaths.length === 0 && duplicatePaths.length === 0,
+      ok:missingPaths.length === 0 && duplicatePaths.length === 0 && typeMismatches.length === 0,
       referenced_paths:uniquePaths,
       assets,
       missing_paths:missingPaths,
       duplicate_paths:[...new Set(duplicatePaths)],
+      type_mismatches:typeMismatches,
       invalid_records:invalidRecords,
       unreferenced_assets:unreferencedAssets,
       aspect_mismatches:aspectMismatches,
