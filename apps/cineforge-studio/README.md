@@ -17,7 +17,7 @@ CineForge is a mobile-friendly, Arabic-first storyboard studio with a small, rep
 - Image-backed scenes from assets committed under jobs/assets/.
 - Scene camera moves: static, push-in, pull-out, pan left/right/up/down.
 - Separate voiceover and music tracks from jobs/audio/, with independent volume controls.
-- Machine-readable FFprobe report in every rendered artifact.
+- Machine-readable FFprobe/QA report plus an opening-frame JPEG thumbnail in every rendered artifact.
 
 ## Active engine inventory
 
@@ -65,9 +65,15 @@ The detailed Arabic execution roadmap is in [docs/cineforge/MASTER_ROADMAP_AR.md
 4. Set each scene's `image_file` and `camera_move`; set top-level `voiceover_file`, `music_file` and `music_volume` as needed. Older projects using a single `audio_file` at the root of `jobs/` remain supported.
 5. Commit the job JSON and media together. A push that changes a job JSON starts the render workflow automatically.
 6. When adding media in a separate later commit without changing a job JSON, open **Actions → CineForge CPU Renderer → Run workflow**, then choose the exact job file. This avoids accidentally rendering the sample project.
-7. Download the artifact. It contains the MP4 and technical QA reports.
+7. Download the artifact. It contains the MP4, opening-frame thumbnail, FFprobe JSON and render-report.json with output/thumbnail hashes and a render_id fingerprint.
 
 The sample job is `jobs/demo.json`. The renderer validates paths, duration, scene count, text lengths, camera movement and media extensions before processing. Image/audio files must already be committed: the workflow does not download media.
+
+### Render identity and preview artifact
+
+Each CI render now includes an opening-frame JPEG preview (sampled at 0.1 seconds) alongside the MP4 and reports. The QA report records its filename, byte size and SHA-256 hash.
+
+The report also carries a render_id derived from the exact job-file hash, referenced media-file hashes (when the job file is available to the workflow), the media-manifest fingerprint, renderer source-file hashes, source commit, Python version and FFmpeg build banner. This is a traceability fingerprint for the inputs and runtime; it is not a promise that different hardware or library builds will produce byte-identical output.
 
 ## Renderer limits
 
