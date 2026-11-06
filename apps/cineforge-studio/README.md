@@ -127,7 +127,7 @@ The browser editor includes a local Media Bin backed by IndexedDB. Selected imag
 - Extract the ZIP at the repository root and preserve its paths. The render job and its required media bytes are placed under `apps/cineforge-studio/jobs/`; the separate manifest is placed under `apps/cineforge-studio/media-manifests/` so it cannot be mistaken for a render job. Commit only assets you are entitled to publish.
 - A standalone JSON export does not contain actual media bytes. Use the ZIP package for a self-contained backup.
 
-The package uses the `cineforge.project` manifest version 2 while retaining renderer `schema_version: 1) for compatibility with the current Python renderer. Media provenance is descriptive metadata; it does not independently prove a license is valid. Verify rights before publishing.
+The package uses the `cineforge.project` manifest version 2 while retaining renderer `schema_version: 1` for compatibility with the current Python renderer. Media provenance is descriptive metadata; it does not independently prove a license is valid. Verify rights before publishing.
 
 ## Project engine v2 and multi-track editor
 
