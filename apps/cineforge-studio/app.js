@@ -1164,6 +1164,10 @@
       }
 
       const includeUnused = $("includeUnusedMedia").checked;
+      if (includeUnused && packageAudit.all_duplicate_paths.length) {
+        throw new Error("توجد مسارات متضاربة بين ملفات المكتبة الكاملة: " +
+          packageAudit.all_duplicate_paths.slice(0,8).join("، "));
+      }
       if (includeUnused && packageAudit.invalid_records.length) {
         throw new Error("لا يمكن تضمين كامل المكتبة قبل إصلاح السجلات غير الصالحة: " +
           packageAudit.invalid_records.slice(0,5).map(item => item.name).join("، "));
