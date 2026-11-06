@@ -51,6 +51,9 @@ test("project packages default to referenced assets and opt into the whole libra
   assert.match(app, /const packageRecords = includeUnused \? records : packageAudit\.assets/);
   assert.match(app, /const includeUnused = \$\("includeUnusedMedia"\)\.checked/);
   assert.match(app, /if \(includeUnused && packageAudit\.all_duplicate_paths\.length\)/);
+  assert.match(app, /const preflightRecords = includeUnused \? records : packageAudit\.assets/);
+  assert.match(app, /const preflightDuplicatePaths = includeUnused/);
+  assert.match(app, /const preflightRightsAudit = mediaBin\.auditRights\(preflightRecords\)/);
   assert.match(app, /mediaBin\.auditRights\(packageRecords\)/);
 });
 
