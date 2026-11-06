@@ -50,3 +50,29 @@ test("rejects duplicate names and archive path traversal", async () => {
 test("enforces the archive byte budget before returning a ZIP", async () => {
   await assert.rejects(() => media.buildZip([{name:"large.bin",data:new Uint8Array(20)}],{maxBytes:10}), /يتجاوز/);
 });
+
+
+test("audits rights metadata and distinguishes user-owned media from external sources", () => {
+  const report = media.auditRights([
+    {id:"1",name:"own.png",source_type:"user",license:"حقوقي / من إنشائي"},
+    {id:"2",name:"open.png",source_type:"open_license",source_ref:"https://example.org/image",license:"CC BY 4.0"},
+    {id:"3",name:"unknown.png",source_type:"unknown",license:"غير محدد"},
+    {id:"4",name:"generated.png",source_type:"generated",license:"Apache 2.0"}
+  ]);
+  assert.equal(report.ok,false);
+  assert.equal(report.checked_assets,4);
+  assert.deepEqual(report.issues.map(issue => [issue.asset_id,issue.code]), [
+    ["4","source_reference_missing"],
+    ["3","unknown_source"],
+    ["3","license_unspecified"]
+  ]);
+});
+
+test("accepts complete source and permission records", () => {
+  const report = media.auditRights([
+    {id:"u",name:"mine.webp",source_type:"user",license:"من إنشائي"},
+    {id:"g",name:"generated.png",source_type:"generated",source_ref:"Provider X / Model Y",license:"Terms reviewed"}
+  ]);
+  assert.equal(report.ok,true);
+  assert.equal(report.issue_count,0);
+});
