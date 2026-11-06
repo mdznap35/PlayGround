@@ -108,7 +108,7 @@ class QaReportTests(unittest.TestCase):
     @patch("qa_report.shutil.which", return_value="/usr/bin/ffmpeg")
     @patch("qa_report.subprocess.run")
     def test_ffmpeg_version_reader_is_bounded_and_nonfatal(self, mocked_run, _which):
-        mocked_run.return_value = SimpleNamespace(returncode=0, stdout="ffmpeg version 7.1\\nconfiguration", stderr="")
+        mocked_run.return_value = SimpleNamespace(returncode=0, stdout="ffmpeg version 7.1\nconfiguration", stderr="")
         self.assertEqual(read_ffmpeg_version(), "ffmpeg version 7.1")
         mocked_run.side_effect = OSError("not available")
         self.assertIsNone(read_ffmpeg_version())
