@@ -67,6 +67,13 @@ class QaReportTests(unittest.TestCase):
             job["media_manifest"] = [
                 {"id":"asset-1","project_path":"assets/frame.webp","sha256":"a" * 64}
             ]
+            job["scenes"][0]["image_file"] = "assets/frame.webp"
+            (root / "assets").mkdir()
+            (root / "audio").mkdir()
+            image_asset = root / "assets" / "frame.webp"
+            audio_asset = root / "audio" / "voice.wav"
+            image_asset.write_bytes(b"synthetic-image")
+            audio_asset.write_bytes(b"synthetic-audio")
             job_file = root / "job.json"
             job_file.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
             renderer_file = root / "render.py"
@@ -88,6 +95,14 @@ class QaReportTests(unittest.TestCase):
             self.assertEqual(identity["job_sha256"], hashlib.sha256(job_file.read_bytes()).hexdigest())
             self.assertEqual(identity["renderer_files"]["render.py"], hashlib.sha256(renderer_file.read_bytes()).hexdigest())
             self.assertEqual(identity["source_commit"], "commit-a")
+            self.assertEqual(
+                {item["path"]:item for item in identity["referenced_media"]}["assets/frame.webp"]["sha256"],
+                hashlib.sha256(image_asset.read_bytes()).hexdigest()
+            )
+            self.assertEqual(
+                {item["path"]:item for item in identity["referenced_media"]}["audio/voice.wav"]["status"],
+                "present"
+            )
             self.assertEqual(identity["asset_manifest_sha256"], hashlib.sha256(
                 json.dumps(job["media_manifest"], ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
             ).hexdigest())
@@ -104,6 +119,12 @@ class QaReportTests(unittest.TestCase):
             )
             self.assertNotEqual(identity["render_id"], changed_engine["render_id"])
             self.assertNotEqual(changed_engine["render_id"], changed_commit["render_id"])
+            image_asset.write_bytes(b"changed-image-bytes")
+            changed_media = build_render_identity(
+                job, job_path=job_file, renderer_paths=[renderer_file],
+                source_commit="commit-b", ffmpeg_version="ffmpeg version test"
+            )
+            self.assertNotEqual(changed_commit["render_id"], changed_media["render_id"])
 
     @patch("qa_report.shutil.which", return_value="/usr/bin/ffmpeg")
     @patch("qa_report.subprocess.run")
