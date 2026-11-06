@@ -52,3 +52,16 @@ test("project packages default to referenced assets and opt into the whole libra
   assert.match(app, /const includeUnused = \$\("includeUnusedMedia"\)\.checked/);
   assert.match(app, /mediaBin\.auditRights\(packageRecords\)/);
 });
+
+
+test("renderer export controls run the timeline-compatibility guard", () => {
+  assert.match(app, /projectEngine\.rendererCompatibility\(makeProjectDocument\(\)\)/);
+  assert.match(app, /لا يمكن تنزيل وصف الرندر بأمان/);
+  assert.match(app, /لا تعتمد على ملف الرندر/);
+});
+
+test("the Media Bin displays browser-inspected technical metadata", () => {
+  assert.match(app, /item\.width && item\.height/);
+  assert.match(app, /item\.duration_seconds/);
+  assert.match(app, /metadata_status/);
+});
