@@ -1072,18 +1072,19 @@
       const compatibility = projectEngine.rendererCompatibility(currentProject);
       const records = await mediaBin.list();
       const packageAudit = mediaBin.auditPackageAssets(job, records);
-      const blocking = [];
+      const renderBlocking = [];
+      const packageBlocking = [];
       const warnings = [];
 
-      if (!compatibility.ok) blocking.push(...compatibility.errors);
+      if (!compatibility.ok) renderBlocking.push(...compatibility.errors);
       if (packageAudit.missing_paths.length) {
-        blocking.push("ملفات مستخدمة غير موجودة في مكتبة الوسائط: " + packageAudit.missing_paths.join("، "));
+        packageBlocking.push("ملفات مستخدمة غير موجودة في مكتبة هذا المتصفح: " + packageAudit.missing_paths.join("، "));
       }
       if (packageAudit.duplicate_paths.length) {
-        blocking.push("توجد مسارات أصول مكررة داخل المكتبة: " + packageAudit.duplicate_paths.join("، "));
+        packageBlocking.push("توجد مسارات أصول مكررة داخل المكتبة: " + packageAudit.duplicate_paths.join("، "));
       }
       if (packageAudit.type_mismatches.length) {
-        blocking.push(...packageAudit.type_mismatches.map(item =>
+        renderBlocking.push(...packageAudit.type_mismatches.map(item =>
           item.name + ": نوع الأصل " + item.actual_kind + " لا يطابق الاستخدام المطلوب (" +
           item.expected_kinds.join(" أو ") + ")."));
       }
@@ -1111,20 +1112,27 @@
           " سجل وسائط غير صالح في المكتبة؛ لن يؤثر في الحزمة الافتراضية ما لم يكن مطلوباً.");
       }
 
-      panel.dataset.state = blocking.length ? "blocked" : warnings.length ? "warning" : "ready";
-      $("preflightSummary").textContent = blocking.length
-        ? "يحتاج معالجة"
+      const blocked = renderBlocking.length > 0 || packageBlocking.length > 0;
+      panel.dataset.state = blocked ? "blocked" : warnings.length ? "warning" : "ready";
+      $("preflightSummary").textContent = renderBlocking.length
+        ? "الرندر يحتاج معالجة"
+        : packageBlocking.length ? "حزمة ZIP غير مكتملة"
         : warnings.length ? "جاهز مع تنبيهات" : "اجتاز الفحص الأولي";
-      addLine(blocking.length ? "error" : "success",
-        blocking.length ? "تعذّر اعتماد التوافق الكامل للرندر." : "بنية المشروع ومدد المشاهد والترجمة اجتازت الفحص الأولي.");
+
+      addLine(renderBlocking.length ? "error" : "success",
+        renderBlocking.length
+          ? "توجد تعديلات أو ملفات لا يستطيع المصيّر الحالي تمثيلها بأمان."
+          : "توافق الخط الزمني وأنواع الملفات مع المصيّر الحالي سليم.");
+      if (packageBlocking.length) {
+        addLine("warning", "لا يمكن إنشاء ZIP مكتمل حتى تُعالج ملاحظات المكتبة أدناه. قد تكون بعض الملفات موجودة مسبقاً في مستودع الإنتاج.");
+      }
       addLine("info", job.scenes.length + " مشهد · " + timecode(job.scenes.reduce((sum, scene) => sum + scene.seconds, 0)) +
         " · " + job.aspect + " · " + packageAudit.assets.length + " أصل مرتبط.");
-      blocking.forEach(message => addLine("error", message));
+      renderBlocking.forEach(message => addLine("error", message));
+      packageBlocking.forEach(message => addLine("warning", message));
       warnings.forEach(message => addLine("warning", message));
-      if (!blocking.length && !warnings.length) {
-        addLine("success", "لا توجد ملاحظات معروفة في هذا الفحص.");
-      }
-      setSavedState(blocking.length ? "فحص التصدير: يحتاج معالجة" : "اكتمل فحص التصدير الأولي");
+      if (!blocked && !warnings.length) addLine("success", "لا توجد ملاحظات معروفة في هذا الفحص.");
+      setSavedState(blocked ? "فحص التصدير: يحتاج معالجة" : "اكتمل فحص التصدير الأولي");
     } catch (error) {
       panel.dataset.state = "blocked";
       $("preflightSummary").textContent = "تعذّر إكمال الفحص";
