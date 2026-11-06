@@ -1051,6 +1051,18 @@
       if (missing.length) {
         throw new Error("الحزمة لن تكون مكتملة. أضف هذه الملفات إلى مكتبة الوسائط ثم أعد ربطها:\n" + missing.slice(0,8).join("\n"));
       }
+      const rightsAudit = mediaBin.auditRights(records);
+      if (!rightsAudit.ok) {
+        const details = rightsAudit.issues.slice(0,10)
+          .map(issue => "• " + issue.name + ": " + issue.message).join("\n");
+        const remaining = rightsAudit.issue_count > 10
+          ? "\nو" + (rightsAudit.issue_count - 10) + " ملاحظات أخرى." : "";
+        const warning = "تنبيه الحقوق: توجد " + rightsAudit.issue_count +
+          " ملاحظات في " + rightsAudit.checked_assets + " أصل مضمّن.\n\n" +
+          details + remaining +
+          "\n\nيمكنك متابعة إنشاء النسخة الاحتياطية، لكن لا تنشر أو تستخدم الأصول ذات الحقوق غير المتحققة قبل مراجعتها. هل تريد المتابعة؟";
+        if (!confirm(warning)) return;
+      }
       const slug = (job.title || "cineforge").normalize("NFKC")
         .replace(/[^\p{L}\p{N}-]+/gu,"-").replace(/^-|-$/g,"").slice(0,48) || "cineforge";
       const manifestAssets = records.map(item => ({
