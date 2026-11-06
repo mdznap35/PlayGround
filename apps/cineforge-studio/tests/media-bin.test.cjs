@@ -192,3 +192,19 @@ test("package audit warns about still-image aspect ratios that differ from the p
   assert.deepEqual(report.aspect_mismatches.map(item=>item.asset_id),[square.id]);
   assert.equal(report.ok,true,"aspect mismatch is a review warning, not a missing-file failure");
 });
+
+
+test("package audit rejects media whose kind does not match its renderer role", () => {
+  const video = {id:"vid-000001",name:"take.mp4",kind:"video",source_type:"user"};
+  const image = {id:"img-000002",name:"poster.png",kind:"image",source_type:"user"};
+  const report = media.auditPackageAssets({
+    aspect:"16:9",
+    scenes:[{image_file:media.projectPath(video)}],
+    voiceover_file:media.projectPath(image)
+  },[video,image]);
+  assert.equal(report.ok,false);
+  assert.deepEqual(report.type_mismatches.map(item=>[item.actual_kind,item.expected_kinds]),[
+    ["video",["image"]],
+    ["image",["audio"]]
+  ]);
+});
