@@ -114,20 +114,20 @@ The browser autosaves to that browser's local storage. Exported project JSON con
 
 ## Media Bin and portable project packages
 
-The browser editor includes a local Media Bin backed by IndexedDB. It stores selected image/audio/video files in the current browser and records a SHA-256 hash when Web Crypto is available, along with source type, source reference, license text, notes, size, and media type.
+The browser editor includes a local Media Bin backed by IndexedDB. Selected image/audio/video files stay in the current browser; they are not automatically uploaded to Render, GitHub or a cloud bucket. The library records file identity, type, MIME, size, SHA-256 when Web Crypto is available, source/rights fields and technical metadata.
 
-- Supported image files for the current renderer: PNG, JPG, JPEG, WEBP.
-- Supported audio files: MP3, WAV, M4A, OGG, AAC, FLAC.
-- Video files can be catalogued locally, but the current CPU renderer does not place video assets on the timeline yet.
-- Limits: 128 MiB per file, 512 MiB in the local library, 500 items, and 160 MiB per ZIP package. Browser storage quotas still apply.
-- The library is local to the browser. It is not automatically uploaded or synchronized to Render, GitHub, or a cloud bucket.
-- Assign an image to the selected scene or audio to the voiceover/music fields. Then use the ZIP project package action to export the render job, media files, and provenance manifest together.
-- Extract the ZIP at the repository root and preserve its paths. The render job and media bytes are placed under apps/cineforge-studio/jobs/. The separate manifest is placed under apps/cineforge-studio/media-manifests/ so it cannot be mistaken for a render job. Commit the job and its media files together before running the render workflow.
-- A standalone JSON export does not contain the actual media bytes. Use the ZIP package when the render must be self-contained.
+- Supported still images: PNG, JPG, JPEG and WEBP. Current renderer audio: MP3, WAV, M4A, OGG, AAC and FLAC.
+- Video files (MP4, MOV, WEBM and MKV) can be catalogued locally and included in an explicit full-library backup, but the current CPU renderer does not yet place video clips on its timeline.
+- On import, the browser attempts to read image dimensions and audio/video duration using local browser decoders and temporary object URLs. It does not upload the file. If a browser cannot inspect a format, the asset is still stored with `metadata_status: "unavailable"`; the preflight report will call this out.
+- Limits: 128 MiB per file, 512 MiB in the local library, 500 items and 160 MiB per ZIP package. Browser storage quotas still apply.
+- Rights metadata includes source type, source reference, license/permission text and notes. Selecting “user-created / personal” is treated as the user's ownership assertion. Generated, open-license and licensed external assets require a source reference and a non-empty license/permission description. This records evidence and missing fields; it does not certify that a license is legally valid.
+- The **pre-export review** checks renderer/timeline compatibility, missing referenced media, media-kind mismatches, source/rights gaps, unavailable technical metadata and still-image aspect ratios that differ from the selected output by more than 8%. Aspect findings are review warnings, not automatic crop decisions.
+- **Project ZIP includes only files referenced by the current render job by default**: scene images, voiceover and music. Enable “تضمين كل ملفات المكتبة” only when you intentionally want an archive of unused local assets too. Rights checks apply to the files actually included.
+- A referenced file missing from the local Media Bin prevents a complete ZIP package. Unsupported or mismatched file kinds are rejected for render packaging. A ZIP can still preserve the full editable project after an explicit warning when the current renderer cannot faithfully represent a timeline arrangement; the JSON render-job download is guarded against silently flattening unsupported timeline edits.
+- Extract the ZIP at the repository root and preserve its paths. The render job and its required media bytes are placed under `apps/cineforge-studio/jobs/`; the separate manifest is placed under `apps/cineforge-studio/media-manifests/` so it cannot be mistaken for a render job. Commit only assets you are entitled to publish.
+- A standalone JSON export does not contain actual media bytes. Use the ZIP package for a self-contained backup.
 
-The package uses cineforge.project manifest version 2 while retaining renderer schema_version 1 for compatibility with the current Python renderer. Media provenance is descriptive metadata; it does not independently prove that a license is valid. Verify rights before publishing.
-
-
+The package uses the `cineforge.project` manifest version 2 while retaining renderer `schema_version: 1) for compatibility with the current Python renderer. Media provenance is descriptive metadata; it does not independently prove a license is valid. Verify rights before publishing.
 
 ## Project engine v2 and multi-track editor
 
