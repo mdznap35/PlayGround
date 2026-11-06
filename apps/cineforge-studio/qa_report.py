@@ -54,6 +54,35 @@ def read_ffmpeg_version() -> str | None:
     return (completed.stdout or "").splitlines()[0][:300] if completed.stdout else None
 
 
+def _referenced_media_fingerprints(job: dict[str, Any], job_path: Path | None) -> list[dict[str, Any]]:
+    if job_path is None:
+        return []
+    media_root = job_path.resolve().parent
+    references = [
+        scene.get("image_file")
+        for scene in job.get("scenes", [])
+        if isinstance(scene, dict)
+    ]
+    references.extend(job.get(key) for key in ("audio_file", "voiceover_file", "music_file"))
+    result: list[dict[str, Any]] = []
+    for value in sorted({item.strip() for item in references if isinstance(item, str) and item.strip()}):
+        relative = Path(value)
+        entry: dict[str, Any] = {"path": value, "sha256": None, "size_bytes": None, "status": "missing"}
+        if relative.is_absolute() or ".." in relative.parts:
+            entry["status"] = "unsafe-path"
+            result.append(entry)
+            continue
+        candidate = (media_root / relative).resolve()
+        if not candidate.is_relative_to(media_root):
+            entry["status"] = "unsafe-path"
+        elif candidate.is_file():
+            entry["sha256"] = sha256_file(candidate)
+            entry["size_bytes"] = candidate.stat().st_size
+            entry["status"] = "present"
+        result.append(entry)
+    return result
+
+
 def build_render_identity(
     job: dict[str, Any],
     *,
@@ -71,9 +100,11 @@ def build_render_identity(
     }
     media_manifest = job.get("media_manifest")
     asset_manifest_sha = _stable_sha256(media_manifest) if isinstance(media_manifest, list) else None
+    referenced_media = _referenced_media_fingerprints(job, job_path)
     identity = {
         "job_sha256": job_sha,
         "asset_manifest_sha256": asset_manifest_sha,
+        "referenced_media": referenced_media,
         "renderer_files": renderer_files,
         "source_commit": source_commit,
         "python_version": platform.python_version(),
