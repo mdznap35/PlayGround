@@ -3,6 +3,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+
+from PIL import Image
 from types import SimpleNamespace
 from unittest.mock import patch
 import sys
@@ -140,9 +142,12 @@ class QaReportTests(unittest.TestCase):
             root = Path(folder)
             job, probe, video = fixture(root)
             thumbnail = root / "opening-frame.jpg"
-            thumbnail.write_bytes(b"synthetic-thumbnail")
+            Image.new("RGB", (640, 360), color=(24, 48, 72)).save(thumbnail, format="JPEG")
             report = build_qa_report(job, probe, video, thumbnail_path=thumbnail)
             self.assertEqual(report["thumbnail"]["filename"], thumbnail.name)
+            self.assertEqual(report["thumbnail"]["format"], "JPEG")
+            self.assertEqual(report["thumbnail"]["width"], 640)
+            self.assertEqual(report["thumbnail"]["height"], 360)
             self.assertEqual(report["thumbnail"]["size_bytes"], thumbnail.stat().st_size)
             self.assertEqual(report["thumbnail"]["sha256"], hashlib.sha256(thumbnail.read_bytes()).hexdigest())
 
@@ -156,6 +161,15 @@ class QaReportTests(unittest.TestCase):
             empty.touch()
             with self.assertRaisesRegex(ValueError, "thumbnail is empty"):
                 build_qa_report(job, probe, video, thumbnail_path=empty)
+
+    def test_rejects_corrupt_opening_frame_thumbnail(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            job, probe, video = fixture(root)
+            corrupt = root / "corrupt.jpg"
+            corrupt.write_bytes(b"not-a-real-jpeg")
+            with self.assertRaisesRegex(ValueError, "not a valid image"):
+                build_qa_report(job, probe, video, thumbnail_path=corrupt)
 
     def test_silent_job_is_valid_without_audio_and_reports_it_explicitly(self):
         with tempfile.TemporaryDirectory() as folder:
