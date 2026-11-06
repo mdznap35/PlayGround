@@ -90,7 +90,6 @@ def build_render_identity(
     renderer_paths: list[Path] | None = None,
     source_commit: str | None = None,
     ffmpeg_version: str | None = None,
-    thumbnail_path: Path | None = None,
 ) -> dict[str, Any]:
     """Fingerprint the exact job, renderer sources, assets manifest and runtime."""
     job_sha = sha256_file(job_path) if job_path and job_path.is_file() else _stable_sha256(job)
@@ -193,6 +192,7 @@ def build_qa_report(
     renderer_paths: list[Path] | None = None,
     source_commit: str | None = None,
     ffmpeg_version: str | None = None,
+    thumbnail_path: Path | None = None,
 ) -> dict[str, Any]:
     if not isinstance(job, dict):
         raise ValueError("Renderer job must be an object.")
