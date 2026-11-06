@@ -119,6 +119,82 @@
     return Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, "0")).join("");
   }
 
+  function unavailableMediaMetadata() {
+    return {width:null,height:null,duration_seconds:null,metadata_status:"unavailable"};
+  }
+
+  async function inspectMediaMetadata(file, platform = root) {
+    const kind = inferKind(file && file.name);
+    if (kind === "image" && typeof platform.createImageBitmap === "function") {
+      try {
+        const bitmap = await platform.createImageBitmap(file);
+        const result = Number(bitmap.width) > 0 && Number(bitmap.height) > 0
+          ? {width:Number(bitmap.width),height:Number(bitmap.height),duration_seconds:null,metadata_status:"available"}
+          : unavailableMediaMetadata();
+        if (typeof bitmap.close === "function") bitmap.close();
+        return result;
+      } catch (_) {
+        // Fall through to the browser image element when bitmap decoding is unavailable.
+      }
+    }
+
+    const documentObject = platform.document;
+    const urlApi = platform.URL;
+    if (!documentObject || !urlApi || typeof urlApi.createObjectURL !== "function") {
+      return unavailableMediaMetadata();
+    }
+
+    let objectUrl;
+    try {
+      objectUrl = urlApi.createObjectURL(file);
+    } catch (_) {
+      return unavailableMediaMetadata();
+    }
+
+    return new Promise(resolve => {
+      const tag = kind === "image" ? "img" : kind === "video" ? "video" : "audio";
+      const element = documentObject.createElement(tag);
+      let settled = false;
+      const finish = metadata => {
+        if (settled) return;
+        settled = true;
+        element.onload = null;
+        element.onerror = null;
+        element.onloadedmetadata = null;
+        try {
+          if (typeof element.removeAttribute === "function") element.removeAttribute("src");
+          if (typeof element.load === "function") element.load();
+        } catch (_) {}
+        try { urlApi.revokeObjectURL(objectUrl); } catch (_) {}
+        resolve(metadata);
+      };
+
+      element.preload = "metadata";
+      if (kind === "video") {
+        element.muted = true;
+        element.playsInline = true;
+      }
+      const onReady = () => {
+        const width = kind === "audio" ? null : Number(kind === "image" ? (element.naturalWidth || element.width) : element.videoWidth);
+        const height = kind === "audio" ? null : Number(kind === "image" ? (element.naturalHeight || element.height) : element.videoHeight);
+        const duration = kind === "image" ? null : Number(element.duration);
+        const dimensionsValid = kind === "audio" || (Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0);
+        const durationValid = kind === "image" || (Number.isFinite(duration) && duration >= 0);
+        finish(dimensionsValid && durationValid
+          ? {width,height,duration_seconds:duration,metadata_status:"available"}
+          : unavailableMediaMetadata());
+      };
+      element.onload = kind === "image" ? onReady : null;
+      element.onloadedmetadata = kind === "image" ? null : onReady;
+      element.onerror = () => finish(unavailableMediaMetadata());
+      try {
+        element.src = objectUrl;
+      } catch (_) {
+        finish(unavailableMediaMetadata());
+      }
+    });
+  }
+
   async function usage() {
     const db = await openDatabase();
     const transaction = db.transaction(STORE, "readonly");
@@ -155,6 +231,7 @@
     if (current.count >= MAX_ASSETS) throw new RangeError("وصلت مكتبة الوسائط إلى حد 500 ملف.");
     if (current.bytes + file.size > MAX_LIBRARY_BYTES) throw new RangeError("تجاوزت مكتبة الوسائط سقف 512 ميغابايت. احذف ملفات غير مستخدمة أو صدّرها ثم أزلها.");
     const sourceType = SOURCE_TYPES.has(metadata.source_type) ? metadata.source_type : "unknown";
+    const technicalMetadata = await inspectMediaMetadata(file);
     const record = {
       id: createId(),
       name: cleanText(file.name, 180, "media." + extension(file.name)),
@@ -162,6 +239,7 @@
       mime: cleanText(file.type, 120, "application/octet-stream"),
       size: file.size,
       sha256: await digestFile(file),
+      ...technicalMetadata,
       source_type: sourceType,
       source_ref: cleanText(metadata.source_ref, 500, ""),
       license: cleanText(metadata.license, 180, "غير محدد"),
@@ -354,6 +432,6 @@
   return {
     MAX_FILE_BYTES, MAX_LIBRARY_BYTES, MAX_ARCHIVE_BYTES, MAX_ASSETS,
     inferKind, projectPath, validateArchivePath, crc32, buildZip,
-    usage, list, get, add, remove, auditRights, auditPackageAssets
+    usage, list, get, add, remove, inspectMediaMetadata, auditRights, auditPackageAssets
   };
 });
