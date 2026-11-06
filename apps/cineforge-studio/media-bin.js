@@ -338,6 +338,8 @@
 
     const assets = uniquePaths.map(path => byPath.get(path)).filter(Boolean);
     const missingPaths = uniquePaths.filter(path => !byPath.has(path));
+    const allDuplicatePaths = [...new Set(duplicatePaths)];
+    const referencedDuplicatePaths = allDuplicatePaths.filter(path => expectedKindsByPath.has(path));
     const typeMismatches = assets.filter(asset => {
       const path = projectPath(asset);
       const expectedKinds = expectedKindsByPath.get(path);
@@ -364,11 +366,12 @@
     const rightsAudit = auditRights(assets);
 
     return {
-      ok:missingPaths.length === 0 && duplicatePaths.length === 0 && typeMismatches.length === 0,
+      ok:missingPaths.length === 0 && referencedDuplicatePaths.length === 0 && typeMismatches.length === 0,
       referenced_paths:uniquePaths,
       assets,
       missing_paths:missingPaths,
-      duplicate_paths:[...new Set(duplicatePaths)],
+      duplicate_paths:referencedDuplicatePaths,
+      all_duplicate_paths:allDuplicatePaths,
       type_mismatches:typeMismatches,
       invalid_records:invalidRecords,
       unreferenced_assets:unreferencedAssets,
