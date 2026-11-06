@@ -160,18 +160,24 @@ jobs:
           mkdir -p dist
           python apps/cineforge-studio/render.py "${{ steps.job.outputs.file }}" --output dist/cineforge.mp4
 
+      - name: Generate opening-frame thumbnail
+        run: |
+          ffmpeg -hide_banner -loglevel error -i dist/cineforge.mp4 -ss 0.1 -frames:v 1 -vf "scale='if(gte(iw,ih),640,-2)':'if(gte(iw,ih),-2,640)'" -q:v 4 dist/opening-frame.jpg
+          test -s dist/opening-frame.jpg
+
       - name: Inspect MP4 and write SHA-256 QA report
         env:
           JOB_FILE: ${{ steps.job.outputs.file }}
         run: |
           ffprobe -v error -show_entries format=duration,size,bit_rate -show_entries stream=codec_type,codec_name,width,height,r_frame_rate,avg_frame_rate,bit_rate,sample_rate,channels,channel_layout -of json dist/cineforge.mp4 > dist/ffprobe.json
-          python apps/cineforge-studio/qa_report.py --job "$JOB_FILE" --video dist/cineforge.mp4 --probe dist/ffprobe.json --output dist/render-report.json
+          python apps/cineforge-studio/qa_report.py --job "$JOB_FILE" --video dist/cineforge.mp4 --probe dist/ffprobe.json --output dist/render-report.json --thumbnail dist/opening-frame.jpg
       - name: Upload video and QA report
         uses: actions/upload-artifact@v4
         with:
           name: cineforge-mp4-${{ github.run_number }}
           path: |
             dist/cineforge.mp4
+            dist/opening-frame.jpg
             dist/render-report.json
             dist/ffprobe.json
           if-no-files-found: error
