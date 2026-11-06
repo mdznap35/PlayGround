@@ -1,4 +1,5 @@
 import hashlib
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -8,7 +9,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from qa_report import build_qa_report, run_content_analysis
+from qa_report import build_qa_report, build_render_identity, read_ffmpeg_version, run_content_analysis
 
 
 def fixture(tmp: Path, *, audio=True):
@@ -57,6 +58,60 @@ class QaReportTests(unittest.TestCase):
             self.assertEqual(report["audio_streams"][0]["codec"], "aac")
             self.assertEqual(report["audio_streams"][0]["channels"], 2)
             self.assertTrue(all(report["quality_gates"].values()))
+
+
+    def test_render_identity_fingerprints_job_engine_assets_and_source_revision(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            job, probe, video = fixture(root)
+            job["media_manifest"] = [
+                {"id":"asset-1","project_path":"assets/frame.webp","sha256":"a" * 64}
+            ]
+            job_file = root / "job.json"
+            job_file.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
+            renderer_file = root / "render.py"
+            renderer_file.write_text("renderer-v1", encoding="utf-8")
+
+            first = build_qa_report(
+                job, probe, video, job_path=job_file,
+                renderer_paths=[renderer_file], source_commit="commit-a",
+                ffmpeg_version="ffmpeg version test"
+            )
+            second = build_qa_report(
+                job, probe, video, job_path=job_file,
+                renderer_paths=[renderer_file], source_commit="commit-a",
+                ffmpeg_version="ffmpeg version test"
+            )
+            identity = first["render_identity"]
+            self.assertEqual(first["render_id"], identity["render_id"])
+            self.assertEqual(first["render_id"], second["render_id"])
+            self.assertEqual(identity["job_sha256"], hashlib.sha256(job_file.read_bytes()).hexdigest())
+            self.assertEqual(identity["renderer_files"]["render.py"], hashlib.sha256(renderer_file.read_bytes()).hexdigest())
+            self.assertEqual(identity["source_commit"], "commit-a")
+            self.assertEqual(identity["asset_manifest_sha256"], hashlib.sha256(
+                json.dumps(job["media_manifest"], ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest())
+            self.assertTrue(first["quality_gates"]["render_identity_recorded"])
+
+            renderer_file.write_text("renderer-v2", encoding="utf-8")
+            changed_engine = build_render_identity(
+                job, job_path=job_file, renderer_paths=[renderer_file],
+                source_commit="commit-a", ffmpeg_version="ffmpeg version test"
+            )
+            changed_commit = build_render_identity(
+                job, job_path=job_file, renderer_paths=[renderer_file],
+                source_commit="commit-b", ffmpeg_version="ffmpeg version test"
+            )
+            self.assertNotEqual(identity["render_id"], changed_engine["render_id"])
+            self.assertNotEqual(changed_engine["render_id"], changed_commit["render_id"])
+
+    @patch("qa_report.shutil.which", return_value="/usr/bin/ffmpeg")
+    @patch("qa_report.subprocess.run")
+    def test_ffmpeg_version_reader_is_bounded_and_nonfatal(self, mocked_run, _which):
+        mocked_run.return_value = SimpleNamespace(returncode=0, stdout="ffmpeg version 7.1\\nconfiguration", stderr="")
+        self.assertEqual(read_ffmpeg_version(), "ffmpeg version 7.1")
+        mocked_run.side_effect = OSError("not available")
+        self.assertIsNone(read_ffmpeg_version())
 
     def test_silent_job_is_valid_without_audio_and_reports_it_explicitly(self):
         with tempfile.TemporaryDirectory() as folder:
