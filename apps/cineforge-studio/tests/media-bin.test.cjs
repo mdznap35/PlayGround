@@ -182,3 +182,13 @@ test("metadata inspection degrades safely when browser decoding is unavailable",
   const metadata = await media.inspectMediaMetadata({name:"unreadable.webp"},{});
   assert.deepEqual(metadata,{width:null,height:null,duration_seconds:null,metadata_status:"unavailable"});
 });
+
+
+test("package audit warns about still-image aspect ratios that differ from the project format", () => {
+  const square = {id:"sq-000001",name:"square.png",kind:"image",source_type:"user",width:1080,height:1080,metadata_status:"available"};
+  const landscape = {id:"ls-000002",name:"wide.webp",kind:"image",source_type:"user",width:1920,height:1080,metadata_status:"available"};
+  const job = {aspect:"16:9",scenes:[{image_file:media.projectPath(square)},{image_file:media.projectPath(landscape)}]};
+  const report = media.auditPackageAssets(job,[square,landscape]);
+  assert.deepEqual(report.aspect_mismatches.map(item=>item.asset_id),[square.id]);
+  assert.equal(report.ok,true,"aspect mismatch is a review warning, not a missing-file failure");
+});
