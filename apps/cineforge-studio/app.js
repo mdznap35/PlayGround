@@ -1072,6 +1072,12 @@
       const compatibility = projectEngine.rendererCompatibility(currentProject);
       const records = await mediaBin.list();
       const packageAudit = mediaBin.auditPackageAssets(job, records);
+      const includeUnused = $("includeUnusedMedia").checked;
+      const preflightRecords = includeUnused ? records : packageAudit.assets;
+      const preflightDuplicatePaths = includeUnused
+        ? packageAudit.all_duplicate_paths
+        : packageAudit.duplicate_paths;
+      const preflightRightsAudit = mediaBin.auditRights(preflightRecords);
       const renderBlocking = [];
       const packageBlocking = [];
       const warnings = [];
@@ -1080,36 +1086,42 @@
       if (packageAudit.missing_paths.length) {
         packageBlocking.push("ملفات مستخدمة غير موجودة في مكتبة هذا المتصفح: " + packageAudit.missing_paths.join("، "));
       }
-      if (packageAudit.duplicate_paths.length) {
-        packageBlocking.push("توجد مسارات أصول مكررة داخل المكتبة: " + packageAudit.duplicate_paths.join("، "));
+      if (preflightDuplicatePaths.length) {
+        packageBlocking.push("توجد مسارات أصول مكررة ضمن نطاق الحزمة المختار: " + preflightDuplicatePaths.join("، "));
+      }
+      if (includeUnused && packageAudit.invalid_records.length) {
+        packageBlocking.push("لا يمكن تضمين المكتبة كاملة قبل إصلاح " +
+          packageAudit.invalid_records.length + " سجل وسائط غير صالح.");
       }
       if (packageAudit.type_mismatches.length) {
         renderBlocking.push(...packageAudit.type_mismatches.map(item =>
           item.name + ": نوع الأصل " + item.actual_kind + " لا يطابق الاستخدام المطلوب (" +
           item.expected_kinds.join(" أو ") + ")."));
       }
-      if (packageAudit.rights_audit.issue_count) {
-        warnings.push("توجد " + packageAudit.rights_audit.issue_count +
-          " ملاحظات حقوق في " + packageAudit.rights_audit.checked_assets + " أصل مستخدم.");
+      if (preflightRightsAudit.issue_count) {
+        warnings.push("توجد " + preflightRightsAudit.issue_count +
+          " ملاحظات حقوق في " + preflightRightsAudit.checked_assets + " أصل ضمن نطاق الحزمة المختار.");
       }
       if (packageAudit.aspect_mismatches.length) {
         warnings.push(packageAudit.aspect_mismatches.length +
           " صورة تختلف نسبتها عن أبعاد الفيديو المختارة بأكثر من 8%؛ راجع القص والملاءمة قبل الإنتاج.");
       }
-      const unreadableMetadata = packageAudit.assets.filter(item => item.metadata_status !== "available").length;
+      const unreadableMetadata = preflightRecords.filter(item => item.metadata_status !== "available").length;
       if (unreadableMetadata) {
-        warnings.push(unreadableMetadata + " أصل مستخدم لم يتمكن المتصفح من قراءة بياناته الفنية.");
+        warnings.push(unreadableMetadata + " أصل ضمن نطاق الحزمة المختار لم يتمكن المتصفح من قراءة بياناته الفنية.");
       }
       if (!packageAudit.referenced_paths.length) {
-        warnings.push("لا توجد صور أو ملفات صوت مرتبطة من مكتبة الوسائط؛ سيعتمد الناتج على تصميمات Motion Graphics والنصوص.");
+        warnings.push("لا توجد صور أو ملفات صوت مرتبطة بالرندر الحالي؛ سيعتمد الناتج على تصميمات Motion Graphics والنصوص.");
       }
       if (packageAudit.unreferenced_assets.length) {
         warnings.push(packageAudit.unreferenced_assets.length +
-          " ملفاً في المكتبة غير مرتبط بالمشروع، ولن يدخل حزمة المشروع افتراضياً.");
+          (includeUnused
+            ? " ملفاً غير مرتبط بالمشاهد لكنه سيُضمّن لأنك اخترت نسخ المكتبة كاملة."
+            : " ملفاً في المكتبة غير مرتبط بالمشروع، ولن يدخل الحزمة الافتراضية."));
       }
-      if (packageAudit.invalid_records.length) {
+      if (packageAudit.invalid_records.length && !includeUnused) {
         warnings.push(packageAudit.invalid_records.length +
-          " سجل وسائط غير صالح في المكتبة؛ لن يؤثر في الحزمة الافتراضية ما لم يكن مطلوباً.");
+          " سجل وسائط غير صالح خارج نطاق الحزمة الافتراضي؛ لن يؤثر ما لم تختر تضمين المكتبة كاملة.");
       }
 
       const blocked = renderBlocking.length > 0 || packageBlocking.length > 0;
@@ -1124,10 +1136,10 @@
           ? "توجد تعديلات أو ملفات لا يستطيع المصيّر الحالي تمثيلها بأمان."
           : "توافق الخط الزمني وأنواع الملفات مع المصيّر الحالي سليم.");
       if (packageBlocking.length) {
-        addLine("warning", "لا يمكن إنشاء ZIP مكتمل حتى تُعالج ملاحظات المكتبة أدناه. قد تكون بعض الملفات موجودة مسبقاً في مستودع الإنتاج.");
+        addLine("warning", "لا يمكن إنشاء ZIP مكتمل حتى تُعالج ملاحظات النطاق المحدد أدناه. قد تكون بعض الملفات موجودة مسبقاً في مستودع الإنتاج.");
       }
       addLine("info", job.scenes.length + " مشهد · " + timecode(job.scenes.reduce((sum, scene) => sum + scene.seconds, 0)) +
-        " · " + job.aspect + " · " + packageAudit.assets.length + " أصل مرتبط.");
+        " · " + job.aspect + " · " + preflightRecords.length + " أصل ضمن نطاق الحزمة.");
       renderBlocking.forEach(message => addLine("error", message));
       packageBlocking.forEach(message => addLine("warning", message));
       warnings.forEach(message => addLine("warning", message));
