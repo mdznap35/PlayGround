@@ -148,3 +148,26 @@
 .caption-footnote{margin:12px 0 0;font-size:9px}
 .timeline-lane-subtitle .timeline-clip{background:linear-gradient(90deg,rgba(33,111,92,.95),rgba(20,83,72,.96));border-color:rgba(139,230,194,.48)}
 @media(max-width:680px){.caption-editor{grid-template-columns:1fr 1fr;padding:10px}.caption-editor .caption-field:first-child,.caption-text-field,.caption-form-actions{grid-column:1/-1}.caption-status{width:100%;margin:2px 0 0}.caption-item{grid-template-columns:1fr}.caption-item-actions{justify-content:flex-start}}
+
+
+/* Export preflight: clear local validation before a project package is created. */
+.preflight-card{margin:16px 0;padding:16px;border:1px solid var(--line);border-radius:14px;background:rgba(8,17,30,.58)}
+.preflight-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.preflight-heading h3{margin:5px 0 0;color:#e7f0f8;font-size:15px}
+.preflight-heading>strong{max-width:46%;padding:7px 10px;border:1px solid rgba(151,176,207,.2);border-radius:9px;color:#aebfd0;font-size:10px;text-align:center}
+.preflight-intro{margin:10px 0 12px;color:var(--muted);font-size:11px;line-height:1.8}
+.preflight-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.preflight-option{display:flex;align-items:flex-start;gap:9px;max-width:100%;color:#d8e4ef;font-size:11px;line-height:1.7;cursor:pointer}
+.preflight-option input{width:17px;height:17px;flex:0 0 auto;margin:2px 0 0;accent-color:#9edfc0}
+.preflight-option span{display:grid;gap:2px}
+.preflight-option small{color:var(--muted);font-size:9px;line-height:1.6}
+.preflight-report{display:grid;gap:7px;margin:12px 0 0;padding:0;list-style:none}
+.preflight-item{padding:8px 10px;border-inline-start:3px solid rgba(151,176,207,.35);border-radius:6px;background:rgba(255,255,255,.025);color:#c7d4e0;font-size:10px;line-height:1.7;overflow-wrap:anywhere}
+.preflight-success{border-inline-start-color:#76cda8}
+.preflight-warning{border-inline-start-color:#d6ad69}
+.preflight-error{border-inline-start-color:#e18b8b}
+.preflight-info{border-inline-start-color:#83aacc}
+.preflight-card[data-state="ready"] .preflight-heading>strong{color:#9ee2bd;border-color:rgba(118,205,168,.35)}
+.preflight-card[data-state="warning"] .preflight-heading>strong{color:#e6c58d;border-color:rgba(214,173,105,.35)}
+.preflight-card[data-state="blocked"] .preflight-heading>strong{color:#f0aaaa;border-color:rgba(225,139,139,.35)}
+@media(max-width:680px){.preflight-card{padding:12px}.preflight-heading{align-items:flex-start;flex-direction:column}.preflight-heading>strong{max-width:100%}.preflight-actions{align-items:stretch;flex-direction:column}.preflight-actions>.secondary-button{width:100%}}
