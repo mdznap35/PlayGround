@@ -924,7 +924,12 @@
         title.title = item.name;
         const detail = document.createElement("span");
         detail.className = "media-card-detail";
-        detail.textContent = mediaKindLabel(item.kind) + " · " + formatBytes(item.size);
+        const technical = [];
+        if (item.width && item.height) technical.push(item.width + " × " + item.height);
+        if (Number.isFinite(item.duration_seconds)) technical.push("مدة " + timecode(item.duration_seconds));
+        if (item.metadata_status === "unavailable") technical.push("تعذّرت قراءة البيانات الفنية");
+        detail.textContent = mediaKindLabel(item.kind) + " · " + formatBytes(item.size) +
+          (technical.length ? " · " + technical.join(" · ") : "");
         const origin = document.createElement("span");
         origin.className = "media-card-origin";
         const sourceLabels = {user:"من إنشائي",generated:"مولّد",open_license:"ترخيص مفتوح",licensed:"مرخّص",unknown:"غير متحقق"};
@@ -1144,6 +1149,8 @@
         .replace(/[^\p{L}\p{N}-]+/gu,"-").replace(/^-|-$/g,"").slice(0,48) || "cineforge";
       const manifestAssets = packageRecords.map(item => ({
         id:item.id, name:item.name, kind:item.kind, mime:item.mime, size:item.size,
+        width:item.width ?? null, height:item.height ?? null,
+        duration_seconds:item.duration_seconds ?? null, metadata_status:item.metadata_status || "unavailable",
         sha256:item.sha256, source_type:item.source_type, source_ref:item.source_ref,
         license:item.license, notes:item.notes, created_at:item.created_at,
         project_path:mediaBin.projectPath(item)
