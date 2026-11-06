@@ -34,3 +34,21 @@ test("every literal DOM id requested by app.js exists in the studio page", () =>
   const missing = [...referenced].filter(id => !html.includes('id="' + id + '"'));
   assert.deepEqual(missing, [], "Missing app DOM ids: " + missing.join(", "));
 });
+
+
+test("the pre-export review controls exist and the full-library option is opt-in", () => {
+  for (const id of ["preflightButton","preflightSummary","preflightReport","includeUnusedMedia"]) {
+    assert.ok(html.includes('id="' + id + '"'), "Missing preflight control: " + id);
+  }
+  const option = html.match(/<input\\b(?=[^>]*\\bid="includeUnusedMedia")[^>]*>/);
+  assert.ok(option, "Full-library checkbox must exist");
+  assert.doesNotMatch(option[0], /\\bchecked(?:\\s|=|>)/i, "Full-library export must be disabled by default");
+  assert.match(app, /\$\("preflightButton"\)\.addEventListener\("click",\s*runExportPreflight\)/);
+});
+
+test("project packages default to referenced assets and opt into the whole library explicitly", () => {
+  assert.match(app, /mediaBin\.auditPackageAssets\(job,\s*records\)/);
+  assert.match(app, /const packageRecords = includeUnused \? records : packageAudit\.assets/);
+  assert.match(app, /const includeUnused = \$\("includeUnusedMedia"\)\.checked/);
+  assert.match(app, /mediaBin\.auditRights\(packageRecords\)/);
+});
