@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#09111f"><meta name="description" content="CineForge Story Planner — تخطيط القصة والاستمرارية والتعليق الصوتي.">
+<title>CineForge | مخطط القصة</title>
+<link rel="stylesheet" href="./story-planner.css">
+</head>
+<body>
+<header class="top"><a href="./index.html">← العودة إلى الاستوديو</a><div><b>CINEFORGE</b><span> STORY ARCHITECT / 02</span></div><span id="saveState">حفظ محلي تلقائي</span></header>
+<main class="wrap">
+<section class="hero"><small>FROM CONCEPT TO COHERENT STORY</small><h1>ابنِ قصةً متماسكة،<br><em>قبل أن تصنع مشهداً واحداً.</em></h1><p>حوّل الفكرة إلى بنية سردية واضحة، وثبّت تفاصيل العالم والشخصيات، وراجع مصادر المعلومات وإيقاع التعليق الصوتي.</p></section>
+<section class="panel">
+<div class="head"><div><small>01 / CREATIVE BRIEF</small><h2>موجز القصة</h2></div><span class="tag">STORY PLAN</span></div>
+<div class="grid">
+<label>عنوان المشروع<input id="title" maxlength="100" placeholder="عنوان الفيديو"></label>
+<label>الجمهور المستهدف<input id="audience" maxlength="140" placeholder="لمن نصنع هذا الفيديو؟"></label>
+<label class="wide">الهدف الأساسي<textarea id="goal" rows="2" maxlength="400" placeholder="ما الذي يجب أن يفهمه أو يشعر به المشاهد؟"></textarea></label>
+<label class="wide">الفكرة المحورية<textarea id="premise" rows="3" maxlength="700" placeholder="اكتب الفكرة في فقرة قصيرة"></textarea></label>
+<label>نوع القصة<select id="format"><option>وثائقي</option><option>تعليمي</option><option>سرد قصصي</option><option>إعلاني</option><option>فيلم قصير</option><option>تجربة بصرية</option></select></label>
+<label>النبرة<select id="tone"><option>سينمائية هادئة</option><option>ملهمة</option><option>تحقيقية</option><option>مرحة</option><option>متوترة دون مبالغة</option><option>تعليمية مباشرة</option></select></label>
+<label>المدة المستهدفة بالدقائق<input id="minutes" type="number" min="0.5" max="10.5" step="0.5" value="3"></label>
+<label>سرعة التعليق (كلمة/دقيقة)<input id="wpm" type="number" min="80" max="220" value="135"></label>
+</div>
+<p class="hint">حد الاستيراد الحالي: 10.5 دقائق عند تحويل المراحل السبع إلى مشهد لكل مرحلة (90 ثانية كحد أقصى للمشهد). يمكن إضافة لقطات أخرى من لوحة المشاهد بعد الاستيراد.</p>
+<div class="metric-row"><div><small>الميزانية الكلامية التقديرية</small><strong id="wordBudget">405 كلمة</strong></div><div><small>المدة المقترحة لكل مرحلة</small><strong id="beatTiming">موزعة على 7 مراحل</strong></div></div>
+</section>
+<section class="panel">
+<div class="head"><div><small>02 / NARRATIVE ARC</small><h2>القوس السردي</h2></div><button id="resetBeats" class="ghost">استعادة المراحل</button></div>
+<p class="hint">اكتب وظيفة كل مرحلة ومحتواها. لا تملأ المراحل بالحشو؛ لكل مرحلة مهمة سردية محددة.</p>
+<div id="beats" class="beats"></div>
+</section>
+<section class="panel">
+<div class="head"><div><small>03 / CONTINUITY BIBLE</small><h2>دليل الاستمرارية</h2></div><span class="tag">KEEP DETAILS CONSISTENT</span></div>
+<p class="hint">سجّل العناصر التي يجب أن تبقى ثابتة بين المشاهد. استخدمها لتجنّب تغيّر وصف الشخصية أو المكان أو الأشياء دون سبب.</p>
+<div class="continuity-grid">
+<div><div class="subhead"><b>الشخصيات</b><button data-add="characters">＋ إضافة</button></div><div id="characters" class="entries"></div></div>
+<div><div class="subhead"><b>المواقع</b><button data-add="locations">＋ إضافة</button></div><div id="locations" class="entries"></div></div>
+<div><div class="subhead"><b>العناصر / Props</b><button data-add="props">＋ إضافة</button></div><div id="props" class="entries"></div></div>
+</div>
+</section>
+<section class="panel">
+<div class="head"><div><small>04 / RESEARCH LEDGER</small><h2>دفتر المصادر والتحقق</h2></div><button id="addSource" class="ghost">＋ مصدر</button></div>
+<p class="hint">افصل بين الحقيقة الموثقة، والفرضية، والرأي. لا تعتبر المعلومة جاهزة للنشر قبل التحقق منها.</p>
+<div id="sources" class="entries"></div>
+</section>
+<section class="panel">
+<div class="head"><div><small>05 / NARRATION AUDIT</small><h2>مراجعة التعليق الصوتي</h2></div><span class="tag">PACING CHECK</span></div>
+<label class="wide">مسودة التعليق الصوتي<textarea id="narration" rows="8" placeholder="ألصق النص هنا لمراجعة عدد الكلمات والمدة التقديرية..."></textarea></label>
+<div class="metric-row"><div><small>عدد الكلمات التقريبي</small><strong id="actualWords">0</strong></div><div><small>المدة التقديرية</small><strong id="actualDuration">00:00</strong></div><div><small>مقارنة بالمدة المستهدفة</small><strong id="durationStatus">بانتظار النص</strong></div></div>
+</section>
+<section class="actions"><button class="primary" id="export">تصدير خطة القصة JSON ↓</button><button class="ghost" id="print">طباعة الخطة</button><button class="ghost" id="clear">مسح المسودة المحلية</button></section>
+<footer> CINEFORGE STUDIO · STORY PLANNER · تُحفظ المسودة في هذا المتصفح فقط.</footer>
+</main><script src="./story-planner.js"></script>
+</body></html>

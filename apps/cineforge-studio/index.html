@@ -45,8 +45,11 @@
         <div class="rail-label">WORKSPACE</div>
         <a class="rail-link active" href="#projectPanel"><span class="rail-icon">✳</span><span>المشروع</span></a>
         <a class="rail-link" href="#storyboardPanel"><span class="rail-icon">▤</span><span>لوحة المشاهد</span></a>
+        <a class="rail-link" href="#captionsPanel"><span class="rail-icon">CC</span><span>الترجمة</span></a>
+        <a class="rail-link" href="#mediaBinPanel"><span class="rail-icon">▧</span><span>مكتبة الوسائط</span></a>
+        <a class="rail-link" href="./story-planner.html"><span class="rail-icon">✧</span><span>مخطط القصة</span></a>
         <a class="rail-link" href="#exportPanel"><span class="rail-icon">↗</span><span>التصدير</span></a>
-        <div class="rail-bottom"><span class="rail-version">BUILD 0.1.0</span><span class="rail-status"><b></b> CORE READY</span></div>
+        <div class="rail-bottom"><span class="rail-version">BUILD 0.2.0</span><span class="rail-status"><b></b> CORE READY</span></div>
       </aside>
 
       <div class="main-column">
@@ -62,9 +65,18 @@
             <label class="field"><span>النمط البصري</span><select id="style"><option value="cinematic">سينمائي هادئ</option><option value="documentary">وثائقي تحريري</option><option value="educational">تعليمي واضح</option><option value="editorial">مجلة مرئية</option><option value="promo">إعلاني حيوي</option></select></label>
             <label class="field"><span>الأبعاد</span><select id="aspect"><option value="16:9">16:9 — يوتيوب</option><option value="9:16">9:16 — ريلز / شورتس</option><option value="1:1">1:1 — مربع</option></select></label>
             <label class="field"><span>طول الفيديو المستهدف</span><select id="targetDuration"><option value="30">30 ثانية</option><option value="60" selected>دقيقة واحدة</option><option value="90">90 ثانية</option><option value="180">3 دقائق</option><option value="300">5 دقائق</option></select></label>
+            <label class="field"><span>ملف التعليق الصوتي داخل jobs/audio/ (اختياري)</span><input id="voiceoverFile" maxlength="180" placeholder="audio/voiceover.mp3" dir="ltr"></label>
+            <label class="field"><span>ملف الموسيقى داخل jobs/audio/ (اختياري)</span><input id="musicFile" maxlength="180" placeholder="audio/music-bed.mp3" dir="ltr"></label>
+            <label class="field"><span>مستوى الموسيقى الخلفية</span><div class="range-field"><input id="musicVolume" type="range" min="0" max="0.5" step="0.01" value="0.18"><output id="musicVolumeValue">18%</output></div></label>
           </div>
           <div class="panel-footer">
             <span class="micro-note">المخطط الأولي قابل للتعديل بالكامل قبل التصدير.</span>
+            <button class="secondary-button" id="downloadProjectFileButton" type="button"><span>تنزيل ملف المشروع الكامل v2</span><b>↓</b></button>
+            <button class="secondary-button" id="importProjectFileButton" type="button"><span>فتح ملف مشروع محفوظ</span><b>↗</b></button>
+            <input id="projectFile" type="file" accept=".json,.cineforge.json,application/json" hidden>
+            <button class="secondary-button" id="restorePreviousVersionButton" type="button"><span>استعادة نسخة سابقة</span><b>↶</b></button>
+            <button class="secondary-button" id="importStoryButton" type="button"><span>استيراد خطة القصة JSON</span><b>↙</b></button>
+            <input id="storyPlanFile" type="file" accept=".json,application/json" hidden>
             <button class="primary-button" id="generateButton" type="button"><span>بناء مخطط المشاهد</span><b>←</b></button>
           </div>
         </section>
@@ -83,8 +95,42 @@
                 <div class="preview-overlay"><span class="preview-chip">CINEFORGE / PREVIEW</span><span class="preview-time" id="previewTime">00:12</span></div>
               </div>
               <div class="preview-caption"><span class="preview-indicator"></span><span id="previewTitle">افتتاحية: اتساع السؤال</span></div>
-              <p class="preview-disclaimer">هذه معاينة تصميمية ثابتة للمشهد، وليست فيديو مولّداً بعد.</p>
+              <p class="preview-disclaimer" id="previewAsset">هذه معاينة تصميمية ثابتة؛ مسار الصورة يرفق عند الرندر السحابي.</p>
             </div>
+          </div>
+          <div class="timeline-editor" aria-label="الخط الزمني متعدد المسارات">
+            <div class="timeline-editor-heading">
+              <div><span class="section-index">03 / EDITING TIMELINE</span><h3>الخط الزمني متعدد المسارات</h3></div>
+              <span class="timeline-hint">انقر على المسطرة للتنقّل · Space للتشغيل · اسحب المشاهد لإعادة ترتيبها</span>
+            </div>
+            <div class="timeline-toolbar" role="group" aria-label="أدوات تشغيل الخط الزمني">
+              <div class="timeline-transport">
+                <button class="timeline-control" id="timelineStartButton" type="button" aria-label="الانتقال إلى البداية" title="البداية · Home">⏮</button>
+                <button class="timeline-control" id="timelineFrameBackButton" type="button" aria-label="إطار واحد للخلف" title="إطار للخلف · ←">−1f</button>
+                <button class="timeline-control timeline-play-button" id="timelinePlayButton" type="button" aria-label="تشغيل المعاينة" aria-pressed="false">▶ تشغيل</button>
+                <button class="timeline-control" id="timelineFrameForwardButton" type="button" aria-label="إطار واحد للأمام" title="إطار للأمام · →">+1f</button>
+                <button class="timeline-control" id="timelineEndButton" type="button" aria-label="الانتقال إلى النهاية" title="النهاية · End">⏭</button>
+              </div>
+              <div class="timeline-clock" aria-live="off">
+                <output id="timelineCurrentTime">00:00:00</output><span>/</span><output id="timelineTotalTime">01:00:00</output>
+              </div>
+              <label class="timeline-scrub">
+                <span class="sr-only">موضع التشغيل في الخط الزمني</span>
+                <input id="timelineScrubber" type="range" min="0" max="1440" step="1" value="0" aria-label="موضع التشغيل">
+              </label>
+              <label class="timeline-zoom">
+                <span>التكبير</span>
+                <input id="timelineZoom" type="range" min="100" max="250" step="10" value="100">
+                <output id="timelineZoomValue">100%</output>
+              </label>
+            </div>
+            <div class="timeline-scroll" id="timelineScroll" tabindex="0" aria-label="مساحة الخط الزمني؛ انقر لتغيير موضع التشغيل">
+              <div class="timeline-stage" id="timelineStage">
+                <div class="timeline-ruler" id="timelineRuler" aria-hidden="true"></div>
+                <div class="multi-track-timeline" id="multiTrackTimeline" aria-live="polite"></div>
+              </div>
+            </div>
+            <p class="timeline-capability-note">المسارات الصوتية هنا تمثيل زمني للمصادر المرتبطة. المُصيّر الحالي يدمج ملف تعليق واحداً وموسيقى واحدة على كامل مدة الفيديو؛ مزج مقاطع متعددة والانتقالات المتقاطعة ما زالا ضمن مراحل التنفيذ التالية.</p>
           </div>
           <div class="timeline-footer">
             <div><span class="timeline-label">ESTIMATED RUNTIME</span><strong id="runtimeTotal">01:00</strong></div>
@@ -93,9 +139,66 @@
           </div>
         </section>
 
+
+        <section class="panel captions-panel" id="captionsPanel">
+          <div class="panel-heading">
+            <div><span class="section-index">04 / CAPTION WORKSPACE</span><h2>الترجمة والتوقيت</h2></div>
+            <span class="panel-tag">SRT · WEBVTT · RTL</span>
+          </div>
+          <p class="caption-intro">استورد ملف SRT أو WebVTT، أو أضف المقاطع يدوياً. اربط كل مقطع بالمشهد المناسب واضبط بدايته ونهايته بدقة. تُحفظ المقاطع مع المشروع وتُرسل إلى المصيّر لدمجها داخل MP4.</p>
+          <div class="caption-toolbar">
+            <button class="primary-button" id="captionImportButton" type="button"><span>استيراد SRT / VTT</span><b>↙</b></button>
+            <input id="captionFile" type="file" accept=".srt,.vtt,text/vtt,application/x-subrip" hidden>
+            <button class="secondary-button" id="captionExportSrtButton" type="button"><span>تصدير SRT</span><b>↓</b></button>
+            <button class="secondary-button" id="captionExportVttButton" type="button"><span>تصدير VTT</span><b>↓</b></button>
+            <span class="caption-status" id="captionStatus" role="status" aria-live="polite">لا توجد مقاطع ترجمة بعد.</span>
+          </div>
+          <div class="caption-editor">
+            <label class="caption-field"><span>المشهد المرتبط</span><select id="captionScene"></select></label>
+            <label class="caption-field"><span>وقت البداية (ثانية)</span><input id="captionStart" type="number" min="0" step="0.001" inputmode="decimal"></label>
+            <label class="caption-field"><span>وقت النهاية (ثانية)</span><input id="captionEnd" type="number" min="0.001" step="0.001" inputmode="decimal"></label>
+            <label class="caption-field caption-text-field"><span>نص الترجمة (حتى 180 حرفاً / سطرين)</span><textarea id="captionText" maxlength="180" rows="2" dir="auto" placeholder="اكتب الترجمة هنا…"></textarea></label>
+            <div class="caption-form-actions">
+              <button class="primary-button" id="captionSaveButton" type="button">إضافة الترجمة</button>
+              <button class="secondary-button" id="captionCancelButton" type="button" hidden>إلغاء التعديل</button>
+            </div>
+          </div>
+          <div class="caption-list" id="captionList" aria-live="polite">
+            <div class="caption-empty">لا توجد ترجمة بعد. أضف مقطعاً أو استورد ملف SRT / VTT.</div>
+          </div>
+          <p class="caption-footnote">التحقق يمنع المقاطع المتداخلة أو التي تتجاوز مدة الفيديو أو تعبر حدود المشهد المرتبط. الترجمة المدمجة داخل MP4 تكون جزءاً من الصورة النهائية وليست مساراً منفصلاً قابلاً للإخفاء.</p>
+        </section>
+
+        <section class="panel media-bin-panel" id="mediaBinPanel">
+          <div class="panel-heading">
+            <div><span class="section-index">05 / MEDIA ASSET LIBRARY</span><h2>مكتبة الوسائط</h2></div>
+            <span class="panel-tag">LOCAL · INDEXEDDB</span>
+          </div>
+          <p class="media-intro">أضف صورك وصوتك ومقاطعك إلى مكتبة هذا المتصفح. نحفظ بصمة كل ملف ومصدره وترخيصه. عند تصدير حزمة المشروع نضمّن الأصول المرتبطة بالمشاهد والصوت فقط افتراضياً، ويمكنك اختيار نسخة كاملة من المكتبة.</p>
+          <div class="media-ingest-grid">
+            <label class="media-field media-files-field"><span>ملفات الوسائط</span><input id="mediaFiles" type="file" accept=".png,.jpg,.jpeg,.webp,.mp3,.wav,.m4a,.ogg,.aac,.flac,.mp4,.mov,.webm,.mkv" multiple></label>
+            <label class="media-field"><span>نوع المصدر</span><select id="assetSourceType">
+              <option value="user">ملفي الشخصي / من إنشائي</option>
+              <option value="generated">مولّد بالذكاء الاصطناعي</option>
+              <option value="open_license">ترخيص مفتوح</option>
+              <option value="licensed">مرخّص / بإذن</option>
+              <option value="unknown" selected>غير معروف / يحتاج تحققاً</option>
+            </select></label>
+            <label class="media-field"><span>المصدر أو رابط الأصل</span><input id="assetSourceRef" maxlength="500" placeholder="رابط المصدر أو وصف مكان الحصول عليه"></label>
+            <label class="media-field"><span>الترخيص أو الإذن</span><input id="assetLicense" maxlength="180" value="غير محدد" placeholder="مثلاً: CC BY 4.0 أو إذن صاحب الملف"></label>
+            <label class="media-field media-notes-field"><span>ملاحظات الحقوق والاستمرارية</span><textarea id="assetNotes" maxlength="1000" rows="2" placeholder="ما الذي يجب معرفته عن هذا الملف؟"></textarea></label>
+          </div>
+          <div class="media-toolbar">
+            <button class="primary-button" id="addMediaButton" type="button"><span>إضافة الملفات إلى المكتبة</span><b>＋</b></button>
+            <span id="mediaStats" class="media-stats" role="status">جارٍ فتح المكتبة المحلية…</span>
+          </div>
+          <div id="mediaGrid" class="media-grid" aria-live="polite"><div class="media-empty">ستظهر الملفات التي تضيفها هنا.</div></div>
+          <p class="media-footnote">الحد الحالي: 128 MB للملف، و512 MB للمكتبة، و160 MB للحزمة الواحدة. المكتبة محلية لهذا المتصفح ولا تُرفع تلقائياً إلى GitHub أو أي خدمة سحابية.</p>
+        </section>
+
         <section class="panel export-panel" id="exportPanel">
           <div class="panel-heading">
-            <div><span class="section-index">03 / DELIVERY PIPELINE</span><h2>إنتاج وتصدير</h2></div>
+            <div><span class="section-index">06 / DELIVERY PIPELINE</span><h2>إنتاج وتصدير</h2></div>
             <span class="engine-badge"><b></b> CPU RENDERER</span>
           </div>
           <div class="pipeline-grid">
@@ -104,19 +207,37 @@
             <div class="pipeline-step"><span class="step-number">03</span><div><strong>ملف MP4</strong><small>H.264 بدقة 1080p، قابل للتنزيل.</small></div><span class="step-output">MP4</span></div>
           </div>
           <div class="export-notice"><span class="notice-icon">i</span><p><strong>توضيح مهم:</strong> المحرك الحالي يصنع فيديوهات Motion Graphics متحركة من المشاهد والنصوص. لا يدّعي توليد لقطات واقعية بالذكاء الاصطناعي. لا يحتاج تنزيل نماذج أو GPU.</p></div>
+          <section class="preflight-card" aria-label="فحص ما قبل التصدير">
+            <div class="preflight-heading">
+              <div><span class="section-index">PRE-EXPORT CHECK</span><h3>مراجعة جاهزية المشروع</h3></div>
+              <strong id="preflightSummary" role="status">لم يُفحص بعد</strong>
+            </div>
+            <p class="preflight-intro">يفحص توافق الخط الزمني مع المصيّر الحالي، ومدد المشاهد والترجمة، ووجود الأصول المستخدمة، وملاحظات الحقوق. الفحص محلي ولا يرفع ملفاتك.</p>
+            <div class="preflight-actions">
+              <button class="secondary-button" id="preflightButton" type="button"><span>فحص المشروع الآن</span><b>✓</b></button>
+              <label class="preflight-option">
+                <input id="includeUnusedMedia" type="checkbox">
+                <span><strong>تضمين كل ملفات المكتبة</strong><small>نسخة احتياطية أوسع؛ قد تشمل مواد لا يستخدمها هذا المشروع وتزيد حجم ZIP.</small></span>
+              </label>
+            </div>
+            <ul id="preflightReport" class="preflight-report" aria-live="polite">
+              <li class="preflight-item preflight-info">اضغط «فحص المشروع الآن» لرؤية تقرير قبل التصدير.</li>
+            </ul>
+          </section>
           <div class="export-actions">
-            <button class="secondary-button" id="downloadButton" type="button"><span>تنزيل ملف المشروع JSON</span><b>↓</b></button>
+            <button class="secondary-button" id="downloadButton" type="button"><span>تنزيل وصف JSON</span><b>↓</b></button>
+            <button class="primary-button" id="downloadPackageButton" type="button"><span>تنزيل حزمة المشروع ZIP</span><b>↓</b></button>
             <button class="primary-button" id="printButton" type="button"><span>طباعة لوحة القصة</span><b>↗</b></button>
           </div>
           <div class="next-instructions">
             <span class="section-index">NEXT STEP / CLOUD RENDER</span>
-            <ol><li>نزّل ملف JSON.</li><li>ارفعه إلى مجلد <code>jobs/</code> في المستودع.</li><li>شغّل سير العمل <code>CineForge CPU Renderer</code> من تبويب Actions.</li><li>نزّل ملف MP4 من Artifact الناتج.</li></ol>
+            <ol><li>نزّل حزمة المشروع ZIP (الأصول المستخدمة فقط افتراضياً) وفك ضغطها من جذر المستودع مع الحفاظ على المجلدات.</li><li>راجع ملفات المشروع والأصول في <code>apps/cineforge-studio/jobs/</code>.</li><li>ارفع ملفات الحزمة إلى المستودع ثم شغّل سير العمل من Actions.</li><li>نزّل MP4 وتقرير الفحص من Artifact الناتج.</li></ol>
             <a href="https://github.com/mdznap35/PlayGround/actions" target="_blank" rel="noopener">فتح GitHub Actions <span>↗</span></a>
           </div>
         </section>
       </div>
     </div>
-    <footer class="footer"><span>© CINEFORGE STUDIO</span><span>DESIGNED FOR IDEAS. BUILT FOR THE CLOUD.</span><span>0.1.0 / FOUNDATION</span></footer>
+    <footer class="footer"><span>© CINEFORGE STUDIO</span><span>DESIGNED FOR IDEAS. BUILT FOR THE CLOUD.</span><span>0.2.0 / CINEMATIC MEDIA</span></footer>
   </main>
 
   <dialog id="helpDialog" class="help-dialog">
@@ -126,6 +247,13 @@
     <p>ملف JSON هو وصف إنتاج الفيديو، وليس الفيديو نفسه. بعد رفعه إلى مجلد jobs وتشغيل GitHub Actions، سيُنتج المحرك ملف MP4.</p>
     <p class="dialog-note">المعالجة الحالية قائمة على Motion Graphics. توليد لقطات AI واقعية يحتاج موصل GPU منفصلاً، وهو غير مفعّل في هذا الإصدار.</p>
   </dialog>
+  <script src="./story-plan-import.js" defer></script>
+  <script src="./project-engine.js" defer></script>
+  <script src="./project-storage.js" defer></script>
+  <script src="./timeline-math.js" defer></script>
+  <script src="./media-bin.js" defer></script>
+  <script src="./narration-fit.js" defer></script>
+  <script src="./captions.js" defer></script>
   <script src="./app.js" defer></script>
 </body>
 </html>
