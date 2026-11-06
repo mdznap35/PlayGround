@@ -174,7 +174,7 @@
             <div><span class="section-index">05 / MEDIA ASSET LIBRARY</span><h2>مكتبة الوسائط</h2></div>
             <span class="panel-tag">LOCAL · INDEXEDDB</span>
           </div>
-          <p class="media-intro">أضف صورك وصوتك ومقاطعك إلى مكتبة هذا المتصفح. نحفظ بصمة كل ملف ومصدره وترخيصه، ويمكن تعيين الصور للمشهد المحدد والصوت لمسارات المشروع.</p>
+          <p class="media-intro">أضف صورك وصوتك ومقاطعك إلى مكتبة هذا المتصفح. نحفظ بصمة كل ملف ومصدره وترخيصه. عند تصدير حزمة المشروع نضمّن الأصول المرتبطة بالمشاهد والصوت فقط افتراضياً، ويمكنك اختيار نسخة كاملة من المكتبة.</p>
           <div class="media-ingest-grid">
             <label class="media-field media-files-field"><span>ملفات الوسائط</span><input id="mediaFiles" type="file" accept=".png,.jpg,.jpeg,.webp,.mp3,.wav,.m4a,.ogg,.aac,.flac,.mp4,.mov,.webm,.mkv" multiple></label>
             <label class="media-field"><span>نوع المصدر</span><select id="assetSourceType">
@@ -207,6 +207,23 @@
             <div class="pipeline-step"><span class="step-number">03</span><div><strong>ملف MP4</strong><small>H.264 بدقة 1080p، قابل للتنزيل.</small></div><span class="step-output">MP4</span></div>
           </div>
           <div class="export-notice"><span class="notice-icon">i</span><p><strong>توضيح مهم:</strong> المحرك الحالي يصنع فيديوهات Motion Graphics متحركة من المشاهد والنصوص. لا يدّعي توليد لقطات واقعية بالذكاء الاصطناعي. لا يحتاج تنزيل نماذج أو GPU.</p></div>
+          <section class="preflight-card" aria-label="فحص ما قبل التصدير">
+            <div class="preflight-heading">
+              <div><span class="section-index">PRE-EXPORT CHECK</span><h3>مراجعة جاهزية المشروع</h3></div>
+              <strong id="preflightSummary" role="status">لم يُفحص بعد</strong>
+            </div>
+            <p class="preflight-intro">يفحص توافق الخط الزمني مع المصيّر الحالي، ومدد المشاهد والترجمة، ووجود الأصول المستخدمة، وملاحظات الحقوق. الفحص محلي ولا يرفع ملفاتك.</p>
+            <div class="preflight-actions">
+              <button class="secondary-button" id="preflightButton" type="button"><span>فحص المشروع الآن</span><b>✓</b></button>
+              <label class="preflight-option">
+                <input id="includeUnusedMedia" type="checkbox">
+                <span><strong>تضمين كل ملفات المكتبة</strong><small>نسخة احتياطية أوسع؛ قد تشمل مواد لا يستخدمها هذا المشروع وتزيد حجم ZIP.</small></span>
+              </label>
+            </div>
+            <ul id="preflightReport" class="preflight-report" aria-live="polite">
+              <li class="preflight-item preflight-info">اضغط «فحص المشروع الآن» لرؤية تقرير قبل التصدير.</li>
+            </ul>
+          </section>
           <div class="export-actions">
             <button class="secondary-button" id="downloadButton" type="button"><span>تنزيل وصف JSON</span><b>↓</b></button>
             <button class="primary-button" id="downloadPackageButton" type="button"><span>تنزيل حزمة المشروع ZIP</span><b>↓</b></button>
@@ -214,7 +231,7 @@
           </div>
           <div class="next-instructions">
             <span class="section-index">NEXT STEP / CLOUD RENDER</span>
-            <ol><li>نزّل حزمة ZIP الكاملة وفك ضغطها من جذر المستودع مع الحفاظ على المجلدات.</li><li>راجع ملفات المشروع والأصول في <code>apps/cineforge-studio/jobs/</code>.</li><li>ارفع ملفات الحزمة إلى المستودع ثم شغّل سير العمل من Actions.</li><li>نزّل MP4 وتقرير الفحص من Artifact الناتج.</li></ol>
+            <ol><li>نزّل حزمة المشروع ZIP (الأصول المستخدمة فقط افتراضياً) وفك ضغطها من جذر المستودع مع الحفاظ على المجلدات.</li><li>راجع ملفات المشروع والأصول في <code>apps/cineforge-studio/jobs/</code>.</li><li>ارفع ملفات الحزمة إلى المستودع ثم شغّل سير العمل من Actions.</li><li>نزّل MP4 وتقرير الفحص من Artifact الناتج.</li></ol>
             <a href="https://github.com/mdznap35/PlayGround/actions" target="_blank" rel="noopener">فتح GitHub Actions <span>↗</span></a>
           </div>
         </section>
