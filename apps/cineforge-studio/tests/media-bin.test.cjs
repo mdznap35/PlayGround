@@ -62,9 +62,9 @@ test("audits rights metadata and distinguishes user-owned media from external so
   assert.equal(report.ok,false);
   assert.equal(report.checked_assets,4);
   assert.deepEqual(report.issues.map(issue => [issue.asset_id,issue.code]), [
-    ["4","source_reference_missing"],
     ["3","unknown_source"],
-    ["3","license_unspecified"]
+    ["3","license_unspecified"],
+    ["4","source_reference_missing"]
   ]);
 });
 
