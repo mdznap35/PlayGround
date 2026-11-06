@@ -731,8 +731,8 @@
       const job = buildJob();
       const compatibility = projectEngine.rendererCompatibility(makeProjectDocument());
       if (!compatibility.ok) {
-        throw new Error("لا يمكن تنزيل وصف الرندر بأمان لأن بعض تعديلات الخط الزمني لا يدعمها المصيّر الحالي:\\n" +
-          compatibility.errors.slice(0,8).join("\\n"));
+        throw new Error("لا يمكن تنزيل وصف الرندر بأمان لأن بعض تعديلات الخط الزمني لا يدعمها المصيّر الحالي:\n" +
+          compatibility.errors.slice(0,8).join("\n"));
       }
       const blob = new Blob([JSON.stringify(job, null, 2)], {type:"application/json;charset=utf-8"});
       const url = URL.createObjectURL(blob);
@@ -1138,9 +1138,9 @@
       const job = buildJob();
       const compatibility = projectEngine.rendererCompatibility(makeProjectDocument());
       if (!compatibility.ok && !confirm(
-        "تنبيه: هذه الحزمة ستحفظ ملف المشروع الكامل، لكن وصف الرندر v1 لا يستطيع تمثيل بعض تعديلات الخط الزمني الحالية.\\n\\n" +
-        compatibility.errors.slice(0,6).join("\\n") +
-        "\\n\\nيمكنك المتابعة لنسخ المشروع الاحتياطي، لكن لا تعتمد على ملف الرندر حتى تعالج هذه الملاحظات. هل تريد المتابعة؟"
+        "تنبيه: هذه الحزمة ستحفظ ملف المشروع الكامل، لكن وصف الرندر v1 لا يستطيع تمثيل بعض تعديلات الخط الزمني الحالية.\n\n" +
+        compatibility.errors.slice(0,6).join("\n") +
+        "\n\nيمكنك المتابعة لنسخ المشروع الاحتياطي، لكن لا تعتمد على ملف الرندر حتى تعالج هذه الملاحظات. هل تريد المتابعة؟"
       )) return;
       const packageAudit = mediaBin.auditPackageAssets(job, records);
       if (packageAudit.missing_paths.length) {
