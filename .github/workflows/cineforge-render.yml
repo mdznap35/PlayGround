@@ -58,6 +58,8 @@ concurrency:
 
 jobs:
   render:
+    # The active feature branch is validated by its PR event; avoid a duplicate full render on every push.
+    if: ${{ github.event_name != 'push' || github.ref != 'refs/heads/feat/cineforge-cinematic-media-v2' }}
     name: Validate and render MP4
     runs-on: ubuntu-latest
     timeout-minutes: 30
