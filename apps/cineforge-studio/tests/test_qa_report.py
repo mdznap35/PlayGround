@@ -134,6 +134,29 @@ class QaReportTests(unittest.TestCase):
         mocked_run.side_effect = OSError("not available")
         self.assertIsNone(read_ffmpeg_version())
 
+
+    def test_report_records_opening_frame_thumbnail_hash_and_size(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            job, probe, video = fixture(root)
+            thumbnail = root / "opening-frame.jpg"
+            thumbnail.write_bytes(b"synthetic-thumbnail")
+            report = build_qa_report(job, probe, video, thumbnail_path=thumbnail)
+            self.assertEqual(report["thumbnail"]["filename"], thumbnail.name)
+            self.assertEqual(report["thumbnail"]["size_bytes"], thumbnail.stat().st_size)
+            self.assertEqual(report["thumbnail"]["sha256"], hashlib.sha256(thumbnail.read_bytes()).hexdigest())
+
+    def test_rejects_missing_or_empty_opening_frame_thumbnail(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            job, probe, video = fixture(root)
+            with self.assertRaisesRegex(ValueError, "thumbnail is missing"):
+                build_qa_report(job, probe, video, thumbnail_path=root / "missing.jpg")
+            empty = root / "empty.jpg"
+            empty.touch()
+            with self.assertRaisesRegex(ValueError, "thumbnail is empty"):
+                build_qa_report(job, probe, video, thumbnail_path=empty)
+
     def test_silent_job_is_valid_without_audio_and_reports_it_explicitly(self):
         with tempfile.TemporaryDirectory() as folder:
             job, probe, video = fixture(Path(folder), audio=False)
