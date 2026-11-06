@@ -323,6 +323,17 @@
     const missingPaths = uniquePaths.filter(path => !byPath.has(path));
     const usedIds = new Set(assets.map(asset => asset.id));
     const unreferencedAssets = records.filter(asset => !usedIds.has(asset && asset.id));
+    const expectedAspect = {"16:9":16/9,"9:16":9/16,"1:1":1}[job.aspect || "16:9"];
+    const aspectMismatches = Number.isFinite(expectedAspect)
+      ? assets.filter(asset => asset.kind === "image" && Number(asset.width) > 0 && Number(asset.height) > 0)
+        .map(asset => ({
+          asset_id:asset.id,
+          name:asset.name,
+          actual:Number(asset.width) / Number(asset.height),
+          expected:expectedAspect
+        }))
+        .filter(item => Math.abs(item.actual - item.expected) / item.expected > 0.08)
+      : [];
     const rightsAudit = auditRights(assets);
 
     return {
@@ -333,6 +344,7 @@
       duplicate_paths:[...new Set(duplicatePaths)],
       invalid_records:invalidRecords,
       unreferenced_assets:unreferencedAssets,
+      aspect_mismatches:aspectMismatches,
       rights_audit:rightsAudit
     };
   }
