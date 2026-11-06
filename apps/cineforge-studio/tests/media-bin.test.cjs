@@ -76,3 +76,50 @@ test("accepts complete source and permission records", () => {
   assert.equal(report.ok,true);
   assert.equal(report.issue_count,0);
 });
+
+
+test("package audit includes only referenced media and audits rights only for used assets", () => {
+  const image = {id:"img-000001",name:"scene.webp",kind:"image",source_type:"user",license:"غير محدد"};
+  const voice = {id:"aud-000002",name:"voice.wav",kind:"audio",source_type:"user",license:"غير محدد"};
+  const unusedUnknown = {id:"old-000003",name:"unused.png",kind:"image",source_type:"unknown",license:"غير محدد"};
+  const unusedVideo = {id:"vid-000004",name:"unused.mp4",kind:"video",source_type:"unknown",license:"غير محدد"};
+  const job = {
+    scenes:[{image_file:media.projectPath(image)},{image_file:media.projectPath(image)}],
+    voiceover_file:media.projectPath(voice),
+    music_file:null
+  };
+  const report = media.auditPackageAssets(job,[image,voice,unusedUnknown,unusedVideo]);
+  assert.equal(report.ok,true);
+  assert.deepEqual(report.referenced_paths,[media.projectPath(image),media.projectPath(voice)]);
+  assert.deepEqual(report.assets.map(item=>item.id),[image.id,voice.id]);
+  assert.deepEqual(report.unreferenced_assets.map(item=>item.id),[unusedUnknown.id,unusedVideo.id]);
+  assert.equal(report.rights_audit.checked_assets,2);
+  assert.equal(report.rights_audit.ok,true);
+  assert.equal(report.missing_paths.length,0);
+});
+
+test("package audit reports missing referenced files and invalid library records", () => {
+  const image = {id:"img-000001",name:"scene.webp",kind:"image",source_type:"user"};
+  const invalid = {id:"bad-000002",name:"payload.exe",kind:"unknown",source_type:"unknown"};
+  const report = media.auditPackageAssets({
+    scenes:[{image_file:media.projectPath(image)},{image_file:"assets/missing-image.webp"}],
+    voiceover_file:null,music_file:null
+  },[invalid]);
+  assert.equal(report.ok,false);
+  assert.deepEqual(report.missing_paths,[media.projectPath(image),"assets/missing-image.webp"]);
+  assert.equal(report.invalid_records.length,1);
+  assert.equal(report.invalid_records[0].asset_id,invalid.id);
+});
+
+test("user-created assets do not require an external license field", () => {
+  const report = media.auditRights([
+    {id:"owned",name:"own.png",source_type:"user",license:"غير محدد"}
+  ]);
+  assert.equal(report.ok,true);
+  assert.equal(report.issue_count,0);
+});
+
+test("package audit rejects malformed inputs", () => {
+  assert.throws(()=>media.auditPackageAssets(null,[]),/مهمة الرندر/);
+  assert.throws(()=>media.auditPackageAssets({scenes:[]},{}),/سجلات مكتبة/);
+});
