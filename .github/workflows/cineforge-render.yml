@@ -21,6 +21,9 @@ on:
       - "apps/cineforge-studio/story-planner.css"
       - "apps/cineforge-studio/story-planner.*"
       - "apps/cineforge-studio/tests/**"
+      - "apps/cineforge-studio/README.md"
+      - "docs/cineforge/PROJECT_STATE.md"
+      - "docs/cineforge/MASTER_ROADMAP_AR.md"
       - ".github/workflows/cineforge-render.yml"
   pull_request:
     branches:
@@ -40,6 +43,9 @@ on:
       - "apps/cineforge-studio/story-planner.css"
       - "apps/cineforge-studio/story-planner.*"
       - "apps/cineforge-studio/tests/**"
+      - "apps/cineforge-studio/README.md"
+      - "docs/cineforge/PROJECT_STATE.md"
+      - "docs/cineforge/MASTER_ROADMAP_AR.md"
       - ".github/workflows/cineforge-render.yml"
   workflow_dispatch:
     inputs:
