@@ -153,11 +153,22 @@
 
     return new Promise(resolve => {
       const tag = kind === "image" ? "img" : kind === "video" ? "video" : "audio";
-      const element = documentObject.createElement(tag);
+      let element;
+      try {
+        element = documentObject.createElement(tag);
+      } catch (_) {
+        try { urlApi.revokeObjectURL(objectUrl); } catch (_) {}
+        resolve(unavailableMediaMetadata());
+        return;
+      }
       let settled = false;
+      let timeoutId = null;
+      const schedule = typeof platform.setTimeout === "function" ? platform.setTimeout.bind(platform) : setTimeout;
+      const cancel = typeof platform.clearTimeout === "function" ? platform.clearTimeout.bind(platform) : clearTimeout;
       const finish = metadata => {
         if (settled) return;
         settled = true;
+        if (timeoutId !== null) cancel(timeoutId);
         element.onload = null;
         element.onerror = null;
         element.onloadedmetadata = null;
@@ -169,6 +180,7 @@
         resolve(metadata);
       };
 
+      timeoutId = schedule(() => finish(unavailableMediaMetadata()), 5000);
       element.preload = "metadata";
       if (kind === "video") {
         element.muted = true;
