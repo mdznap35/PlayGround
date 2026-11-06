@@ -90,6 +90,7 @@ def build_render_identity(
     renderer_paths: list[Path] | None = None,
     source_commit: str | None = None,
     ffmpeg_version: str | None = None,
+    thumbnail_path: Path | None = None,
 ) -> dict[str, Any]:
     """Fingerprint the exact job, renderer sources, assets manifest and runtime."""
     job_sha = sha256_file(job_path) if job_path and job_path.is_file() else _stable_sha256(job)
@@ -204,6 +205,19 @@ def build_qa_report(
     if size_bytes <= 0:
         raise ValueError("Rendered MP4 is empty.")
 
+    thumbnail_info = None
+    if thumbnail_path is not None:
+        if not thumbnail_path.is_file():
+            raise ValueError("Opening-frame thumbnail is missing.")
+        thumbnail_size = thumbnail_path.stat().st_size
+        if thumbnail_size <= 0:
+            raise ValueError("Opening-frame thumbnail is empty.")
+        thumbnail_info = {
+            "filename": thumbnail_path.name,
+            "size_bytes": thumbnail_size,
+            "sha256": sha256_file(thumbnail_path),
+        }
+
     aspect = job.get("aspect", "16:9")
     if aspect not in ASPECT_DIMENSIONS:
         raise ValueError(f"Unsupported export aspect: {aspect!r}.")
@@ -291,6 +305,7 @@ def build_qa_report(
             "size_bytes": size_bytes,
             "sha256": sha256_file(video_path),
         },
+        "thumbnail": thumbnail_info,
         "quality_gates": {
             "h264_video": True,
             "expected_dimensions": True,
@@ -310,6 +325,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--video", type=Path, required=True)
     parser.add_argument("--probe", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--thumbnail", type=Path, default=None)
     args = parser.parse_args(argv)
 
     job = json.loads(args.job.read_text(encoding="utf-8"))
@@ -320,6 +336,7 @@ def main(argv: list[str] | None = None) -> int:
         renderer_paths=[Path(__file__).resolve(), Path(__file__).with_name("render.py").resolve()],
         source_commit=os.environ.get("GITHUB_SHA"),
         ffmpeg_version=read_ffmpeg_version(),
+        thumbnail_path=args.thumbnail,
     )
     report["content_analysis"] = run_content_analysis(
         args.video, include_audio=report["audio_found"]
