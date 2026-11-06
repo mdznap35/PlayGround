@@ -123,3 +123,62 @@ test("package audit rejects malformed inputs", () => {
   assert.throws(()=>media.auditPackageAssets(null,[]),/مهمة الرندر/);
   assert.throws(()=>media.auditPackageAssets({scenes:[]},{}),/سجلات مكتبة/);
 });
+
+
+test("inspects still-image dimensions and closes the decoded bitmap", async () => {
+  let closed = false;
+  const metadata = await media.inspectMediaMetadata(
+    {name:"poster.png"},
+    {createImageBitmap:async () => ({width:1920,height:1080,close:() => {closed=true;}})}
+  );
+  assert.deepEqual(metadata,{width:1920,height:1080,duration_seconds:null,metadata_status:"available"});
+  assert.equal(closed,true);
+});
+
+test("inspects local video dimensions and duration without uploading the file", async () => {
+  let revoked = false;
+  let requestedTag = "";
+  const platform = {
+    URL:{
+      createObjectURL:()=>"blob:local-video",
+      revokeObjectURL:value=>{revoked=value==="blob:local-video";}
+    },
+    document:{
+      createElement(tag) {
+        requestedTag=tag;
+        return {
+          videoWidth:1280,videoHeight:720,duration:12.5,
+          set src(value) { assert.equal(value,"blob:local-video"); queueMicrotask(()=>this.onloadedmetadata()); },
+          removeAttribute(){},load(){}
+        };
+      }
+    }
+  };
+  const metadata = await media.inspectMediaMetadata({name:"take.mp4"},platform);
+  assert.deepEqual(metadata,{width:1280,height:720,duration_seconds:12.5,metadata_status:"available"});
+  assert.equal(requestedTag,"video");
+  assert.equal(revoked,true);
+});
+
+test("inspects audio duration and leaves visual dimensions empty", async () => {
+  const platform = {
+    URL:{createObjectURL:()=>"blob:local-audio",revokeObjectURL:()=>{}},
+    document:{
+      createElement(tag) {
+        assert.equal(tag,"audio");
+        return {
+          duration:83.25,
+          set src(_value) { queueMicrotask(()=>this.onloadedmetadata()); },
+          removeAttribute(){},load(){}
+        };
+      }
+    }
+  };
+  const metadata = await media.inspectMediaMetadata({name:"voice.wav"},platform);
+  assert.deepEqual(metadata,{width:null,height:null,duration_seconds:83.25,metadata_status:"available"});
+});
+
+test("metadata inspection degrades safely when browser decoding is unavailable", async () => {
+  const metadata = await media.inspectMediaMetadata({name:"unreadable.webp"},{});
+  assert.deepEqual(metadata,{width:null,height:null,duration_seconds:null,metadata_status:"unavailable"});
+});
