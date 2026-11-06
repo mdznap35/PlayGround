@@ -198,7 +198,9 @@
         issues.push({asset_id:asset.id || null,name,code:"unknown_source",message:"مصدر الأصل غير موثق."});
       }
       const license = cleanText(asset.license, 180, "").toLowerCase();
-      if (unspecified.has(license)) {
+      // Selecting "user-created / personal" is an explicit ownership assertion in the UI.
+      // External/generated assets still require a meaningful license or permission record.
+      if (unspecified.has(license) && sourceType !== "user") {
         issues.push({asset_id:asset.id || null,name,code:"license_unspecified",message:"الترخيص أو الإذن غير محدد."});
       }
       if (["generated", "open_license", "licensed"].includes(sourceType) &&
@@ -207,6 +209,54 @@
       }
     }
     return {ok:issues.length === 0,checked_assets:records.length,issue_count:issues.length,issues};
+  }
+
+  function auditPackageAssets(job, records) {
+    if (!job || typeof job !== "object" || !Array.isArray(job.scenes)) {
+      throw new TypeError("مهمة الرندر غير صالحة لفحص أصول المشروع.");
+    }
+    if (!Array.isArray(records)) throw new TypeError("سجلات مكتبة الوسائط غير صالحة.");
+
+    const referencedPaths = [
+      ...job.scenes.map(scene => scene && scene.image_file),
+      job.voiceover_file,
+      job.music_file
+    ].filter(value => typeof value === "string" && value.trim()).map(value => value.trim());
+    const uniquePaths = [...new Set(referencedPaths)];
+    const byPath = new Map();
+    const invalidRecords = [];
+    const duplicatePaths = [];
+
+    for (const asset of records) {
+      try {
+        const path = projectPath(asset);
+        if (byPath.has(path)) duplicatePaths.push(path);
+        else byPath.set(path, asset);
+      } catch (error) {
+        invalidRecords.push({
+          asset_id:asset && asset.id || null,
+          name:cleanText(asset && asset.name, 180, "ملف بلا اسم"),
+          message:error && error.message ? error.message : "سجل أصل غير صالح."
+        });
+      }
+    }
+
+    const assets = uniquePaths.map(path => byPath.get(path)).filter(Boolean);
+    const missingPaths = uniquePaths.filter(path => !byPath.has(path));
+    const usedIds = new Set(assets.map(asset => asset.id));
+    const unreferencedAssets = records.filter(asset => !usedIds.has(asset && asset.id));
+    const rightsAudit = auditRights(assets);
+
+    return {
+      ok:missingPaths.length === 0 && duplicatePaths.length === 0,
+      referenced_paths:uniquePaths,
+      assets,
+      missing_paths:missingPaths,
+      duplicate_paths:[...new Set(duplicatePaths)],
+      invalid_records:invalidRecords,
+      unreferenced_assets:unreferencedAssets,
+      rights_audit:rightsAudit
+    };
   }
 
   const crcTable = (() => {
@@ -304,6 +354,6 @@
   return {
     MAX_FILE_BYTES, MAX_LIBRARY_BYTES, MAX_ARCHIVE_BYTES, MAX_ASSETS,
     inferKind, projectPath, validateArchivePath, crc32, buildZip,
-    usage, list, get, add, remove, auditRights
+    usage, list, get, add, remove, auditRights, auditPackageAssets
   };
 });
