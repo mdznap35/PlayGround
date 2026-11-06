@@ -14,6 +14,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from PIL import Image
+
 ASPECT_DIMENSIONS = {
     "16:9": (1920, 1080),
     "9:16": (1080, 1920),
@@ -212,8 +214,21 @@ def build_qa_report(
         thumbnail_size = thumbnail_path.stat().st_size
         if thumbnail_size <= 0:
             raise ValueError("Opening-frame thumbnail is empty.")
+        try:
+            with Image.open(thumbnail_path) as thumbnail:
+                thumbnail.verify()
+            with Image.open(thumbnail_path) as thumbnail:
+                thumbnail_width, thumbnail_height = thumbnail.size
+                thumbnail_format = thumbnail.format
+        except Exception as error:
+            raise ValueError("Opening-frame thumbnail is not a valid image.") from error
+        if thumbnail_width <= 0 or thumbnail_height <= 0:
+            raise ValueError("Opening-frame thumbnail has invalid dimensions.")
         thumbnail_info = {
             "filename": thumbnail_path.name,
+            "format": thumbnail_format,
+            "width": thumbnail_width,
+            "height": thumbnail_height,
             "size_bytes": thumbnail_size,
             "sha256": sha256_file(thumbnail_path),
         }
