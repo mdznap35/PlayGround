@@ -1115,8 +1115,8 @@
       const job = buildJob();
       const packageAudit = mediaBin.auditPackageAssets(job, records);
       if (packageAudit.missing_paths.length) {
-        throw new Error("الحزمة لن تكون مكتملة. أضف هذه الملفات إلى مكتبة الوسائط ثم أعد ربطها:\\n" +
-          packageAudit.missing_paths.slice(0,8).join("\\n"));
+        throw new Error("الحزمة لن تكون مكتملة. أضف هذه الملفات إلى مكتبة الوسائط ثم أعد ربطها:\n" +
+          packageAudit.missing_paths.slice(0,8).join("\n"));
       }
       if (packageAudit.duplicate_paths.length) {
         throw new Error("توجد مسارات مكررة في مكتبة الوسائط: " + packageAudit.duplicate_paths.join("، "));
@@ -1131,17 +1131,17 @@
       const rightsAudit = mediaBin.auditRights(packageRecords);
       if (!rightsAudit.ok) {
         const details = rightsAudit.issues.slice(0,10)
-          .map(issue => "• " + issue.name + ": " + issue.message).join("\\n");
+          .map(issue => "• " + issue.name + ": " + issue.message).join("\n");
         const remaining = rightsAudit.issue_count > 10
-          ? "\\nو" + (rightsAudit.issue_count - 10) + " ملاحظات أخرى." : "";
+          ? "\nو" + (rightsAudit.issue_count - 10) + " ملاحظات أخرى." : "";
         const warning = "تنبيه الحقوق: توجد " + rightsAudit.issue_count +
-          " ملاحظات في " + rightsAudit.checked_assets + " أصل ستُضاف إلى الحزمة.\\n\\n" +
+          " ملاحظات في " + rightsAudit.checked_assets + " أصل ستُضاف إلى الحزمة.\n\n" +
           details + remaining +
-          "\\n\\nيمكنك متابعة إنشاء النسخة الاحتياطية، لكن لا تنشر أو تستخدم الأصول ذات الحقوق غير المتحققة قبل مراجعتها. هل تريد المتابعة؟";
+          "\n\nيمكنك متابعة إنشاء النسخة الاحتياطية، لكن لا تنشر أو تستخدم الأصول ذات الحقوق غير المتحققة قبل مراجعتها. هل تريد المتابعة؟";
         if (!confirm(warning)) return;
       }
       const slug = (job.title || "cineforge").normalize("NFKC")
-        .replace(/[^\\p{L}\\p{N}-]+/gu,"-").replace(/^-|-$/g,"").slice(0,48) || "cineforge";
+        .replace(/[^\p{L}\p{N}-]+/gu,"-").replace(/^-|-$/g,"").slice(0,48) || "cineforge";
       const manifestAssets = packageRecords.map(item => ({
         id:item.id, name:item.name, kind:item.kind, mime:item.mime, size:item.size,
         sha256:item.sha256, source_type:item.source_type, source_ref:item.source_ref,
@@ -1166,21 +1166,21 @@
       job.media_manifest_scope = assetScope;
       const jobRoot = "apps/cineforge-studio/jobs/";
       const entries = [
-        {name:jobRoot + slug + ".json",data:JSON.stringify(job,null,2) + "\\n"},
-        {name:projectFilePath,data:JSON.stringify(fullProject,null,2) + "\\n"},
+        {name:jobRoot + slug + ".json",data:JSON.stringify(job,null,2) + "\n"},
+        {name:projectFilePath,data:JSON.stringify(fullProject,null,2) + "\n"},
         {name:"apps/cineforge-studio/media-manifests/media-manifest-" + slug + ".json",data:JSON.stringify({
           schema:"cineforge.media-manifest",schema_version:1,project_title:job.title,
           asset_scope:assetScope,assets:manifestAssets
-        },null,2) + "\\n"},
+        },null,2) + "\n"},
         {name:"CINEFORGE-PACKAGE-README.txt",data:
-          "CineForge project package\\n\\n" +
-          "Extract this ZIP at the repository root and preserve the folder structure.\\n" +
-          "The render job is under apps/cineforge-studio/jobs/.\\n" +
-          "Media paths in the job are relative to that jobs/ folder.\\n" +
-          "Packaged media scope: " + assetScope + ".\\n" +
-          "By default only media referenced by this project is included.\\n" +
-          "Commit the JSON and its required assets/audio files together before running the CineForge workflow.\\n" +
-          "This package contains local media copies and their provenance metadata.\\n"}
+          "CineForge project package\n\n" +
+          "Extract this ZIP at the repository root and preserve the folder structure.\n" +
+          "The render job is under apps/cineforge-studio/jobs/.\n" +
+          "Media paths in the job are relative to that jobs/ folder.\n" +
+          "Packaged media scope: " + assetScope + ".\n" +
+          "By default only media referenced by this project is included.\n" +
+          "Commit the JSON and its required assets/audio files together before running the CineForge workflow.\n" +
+          "This package contains local media copies and their provenance metadata.\n"}
       ];
       for (const item of packageRecords) {
         const stored = await mediaBin.get(item.id);
@@ -1191,7 +1191,7 @@
       downloadBlob(zip,"cineforge-" + slug + "-project.zip");
       setSavedState("تم إنشاء حزمة المشروع · " + packageRecords.length + " أصل");
     } catch (error) {
-      alert("تعذّر إنشاء حزمة المشروع:\\n" + (error.message || "خطأ غير معروف"));
+      alert("تعذّر إنشاء حزمة المشروع:\n" + (error.message || "خطأ غير معروف"));
     }
   }
 
