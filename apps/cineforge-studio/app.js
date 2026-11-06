@@ -1077,9 +1077,22 @@
       if (packageAudit.duplicate_paths.length) {
         blocking.push("توجد مسارات أصول مكررة داخل المكتبة: " + packageAudit.duplicate_paths.join("، "));
       }
+      if (packageAudit.type_mismatches.length) {
+        blocking.push(...packageAudit.type_mismatches.map(item =>
+          item.name + ": نوع الأصل " + item.actual_kind + " لا يطابق الاستخدام المطلوب (" +
+          item.expected_kinds.join(" أو ") + ")."));
+      }
       if (packageAudit.rights_audit.issue_count) {
         warnings.push("توجد " + packageAudit.rights_audit.issue_count +
           " ملاحظات حقوق في " + packageAudit.rights_audit.checked_assets + " أصل مستخدم.");
+      }
+      if (packageAudit.aspect_mismatches.length) {
+        warnings.push(packageAudit.aspect_mismatches.length +
+          " صورة تختلف نسبتها عن أبعاد الفيديو المختارة بأكثر من 8%؛ راجع القص والملاءمة قبل الإنتاج.");
+      }
+      const unreadableMetadata = packageAudit.assets.filter(item => item.metadata_status === "unavailable").length;
+      if (unreadableMetadata) {
+        warnings.push(unreadableMetadata + " أصل مستخدم لم يتمكن المتصفح من قراءة بياناته الفنية.");
       }
       if (!packageAudit.referenced_paths.length) {
         warnings.push("لا توجد صور أو ملفات صوت مرتبطة من مكتبة الوسائط؛ سيعتمد الناتج على تصميمات Motion Graphics والنصوص.");
@@ -1125,6 +1138,10 @@
       }
       if (packageAudit.duplicate_paths.length) {
         throw new Error("توجد مسارات مكررة في مكتبة الوسائط: " + packageAudit.duplicate_paths.join("، "));
+      }
+      if (packageAudit.type_mismatches.length) {
+        throw new Error("نوع بعض الملفات لا يطابق الاستخدام في المشروع: " +
+          packageAudit.type_mismatches.slice(0,8).map(item => item.name + " (" + item.actual_kind + ")").join("، "));
       }
 
       const includeUnused = $("includeUnusedMedia").checked;
