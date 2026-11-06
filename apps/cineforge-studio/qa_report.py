@@ -6,6 +6,8 @@ import argparse
 import hashlib
 import json
 import math
+import os
+import platform
 import re
 import shutil
 import subprocess
@@ -27,6 +29,58 @@ def sha256_file(path: Path) -> str:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _stable_sha256(value: Any) -> str:
+    payload = json.dumps(
+        value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def read_ffmpeg_version() -> str | None:
+    """Return the FFmpeg build banner without failing the render report."""
+    if not shutil.which("ffmpeg"):
+        return None
+    try:
+        completed = subprocess.run(
+            ["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            text=True, timeout=10
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if completed.returncode != 0:
+        return None
+    return (completed.stdout or "").splitlines()[0][:300] if completed.stdout else None
+
+
+def build_render_identity(
+    job: dict[str, Any],
+    *,
+    job_path: Path | None = None,
+    renderer_paths: list[Path] | None = None,
+    source_commit: str | None = None,
+    ffmpeg_version: str | None = None,
+) -> dict[str, Any]:
+    """Fingerprint the exact job, renderer sources, assets manifest and runtime."""
+    job_sha = sha256_file(job_path) if job_path and job_path.is_file() else _stable_sha256(job)
+    selected_renderer_paths = renderer_paths or [Path(__file__).resolve(), Path(__file__).with_name("render.py").resolve()]
+    renderer_files = {
+        path.name: sha256_file(path) if path.is_file() else None
+        for path in selected_renderer_paths
+    }
+    media_manifest = job.get("media_manifest")
+    asset_manifest_sha = _stable_sha256(media_manifest) if isinstance(media_manifest, list) else None
+    identity = {
+        "job_sha256": job_sha,
+        "asset_manifest_sha256": asset_manifest_sha,
+        "renderer_files": renderer_files,
+        "source_commit": source_commit,
+        "python_version": platform.python_version(),
+        "ffmpeg_version": ffmpeg_version,
+    }
+    identity["render_id"] = _stable_sha256(identity)
+    return identity
 
 
 def _filter_durations(log: str, marker: str) -> list[float]:
@@ -98,7 +152,16 @@ def _number(value: Any, label: str) -> float:
     return result
 
 
-def build_qa_report(job: dict[str, Any], probe: dict[str, Any], video_path: Path) -> dict[str, Any]:
+def build_qa_report(
+    job: dict[str, Any],
+    probe: dict[str, Any],
+    video_path: Path,
+    *,
+    job_path: Path | None = None,
+    renderer_paths: list[Path] | None = None,
+    source_commit: str | None = None,
+    ffmpeg_version: str | None = None,
+) -> dict[str, Any]:
     if not isinstance(job, dict):
         raise ValueError("Renderer job must be an object.")
     scenes = job.get("scenes")
@@ -147,9 +210,20 @@ def build_qa_report(job: dict[str, Any], probe: dict[str, Any], video_path: Path
     if audio_expected and not audio_found:
         raise ValueError("Quality gate: requested audio stream missing.")
 
+    render_identity = build_render_identity(
+        job,
+        job_path=job_path,
+        renderer_paths=renderer_paths,
+        source_commit=source_commit,
+        ffmpeg_version=ffmpeg_version,
+    )
+
     return {
         "schema": "cineforge.render-qa",
+
         "schema_version": 1,
+        "render_id": render_identity["render_id"],
+        "render_identity": render_identity,
         "project_title": str(job.get("title", ""))[:160],
         "aspect": aspect,
         "expected_dimensions": [expected_width, expected_height],
@@ -194,6 +268,7 @@ def build_qa_report(job: dict[str, Any], probe: dict[str, Any], video_path: Path
             "requested_audio_present": (not audio_expected) or audio_found,
             "non_empty_output": True,
             "sha256_recorded": True,
+            "render_identity_recorded": True,
         },
     }
 
@@ -208,7 +283,13 @@ def main(argv: list[str] | None = None) -> int:
 
     job = json.loads(args.job.read_text(encoding="utf-8"))
     probe = json.loads(args.probe.read_text(encoding="utf-8"))
-    report = build_qa_report(job, probe, args.video)
+    report = build_qa_report(
+        job, probe, args.video,
+        job_path=args.job.resolve(),
+        renderer_paths=[Path(__file__).resolve(), Path(__file__).with_name("render.py").resolve()],
+        source_commit=os.environ.get("GITHUB_SHA"),
+        ffmpeg_version=read_ffmpeg_version(),
+    )
     report["content_analysis"] = run_content_analysis(
         args.video, include_audio=report["audio_found"]
     )
